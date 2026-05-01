@@ -193,6 +193,22 @@ def status():
 
     return jsonify(statuses), 200
 
+from flask import jsonify
+
+@app.route("/feeder-status", methods=["GET"])
+def feeder_status():
+    try:
+        # Assuming call_esp32 returns the string "online" or similar
+        status_from_esp = call_esp32("status")
+        
+        if status_from_esp == "online":
+            return jsonify({"status": "online", "device": "esp32_feeder"}), 200
+        else:
+            return jsonify({"status": "offline", "error": "device_unresponsive"}), 503
+
+    except Exception as e:
+        return jsonify({"status": "offline", "error": str(e)}), 503
+
 
 @app.route("/feed", methods=["GET", "POST"])
 def feed():
