@@ -71,15 +71,15 @@ SERVICES = {
     },
     "battery_alert": {
         "check": "pgrep -f battery_alert.sh",
-        "start": "tmux new-session -d -s battery 'bash ~/battery_alert.sh'",
+        "start": "tmux new-session -d -s battery 'bash ~/cyberdeck/battery_alert.sh'",
     },
     "webhook": {
-        "check": "pgrep -f webhook.py",
-        "start": "tmux new-session -d -s webhook 'python3 ~/webhook.py'",
+        "check": "tmux has-session -t webhook",
+        "start": "tmux new-session -d -s webhook 'python3 ~/cyberdeck/webhook.py'",
     },
     "feeder": {
         "check": (
-            f"curl -s --max-time 3 '{RESTART_URL}/status?token={SECRET}'"
+            f"curl -s --max-time 3 'http://{ESP32_IP}/status?token={SECRET}'" # TODO: change to a proper domain
         ),
         "start": None,  # cannot restart ESP32 remotely
     },
@@ -177,8 +177,19 @@ def status():
 
     statuses = {}
     for name, svc in SERVICES.items():
-        result = subprocess.run(svc["check"], shell=True, capture_output=True)
-        statuses[name] = "running" if result.returncode == 0 else "stopped"
+        result = subprocess.run(
+            svc["check"],
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+
+        if name == "feeder":
+            # feeder check command returns HTTP code text (e.g. "200")
+            http_code = (result.stdout or "").strip()
+            statuses[name] = "running" if http_code == "200" else "stopped"
+        else:
+            statuses[name] = "running" if result.returncode == 0 else "stopped"
 
     return jsonify(statuses), 200
 
