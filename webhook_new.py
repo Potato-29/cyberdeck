@@ -187,28 +187,39 @@ def status():
         if name == "feeder":
             # feeder check command returns HTTP code text (e.g. "200")
             http_code = (result.stdout or "").strip()
-            statuses[name] = "running" if http_code == "200" else "stopped"
+            print(f"result: {result} - stdout: {result.stdout}")
+            statuses[name] = "running" if http_code == "online" else "stopped"
         else:
             statuses[name] = "running" if result.returncode == 0 else "stopped"
 
     return jsonify(statuses), 200
 
-from flask import jsonify
-
 @app.route("/feeder-status", methods=["GET"])
 def feeder_status():
     try:
-        # Assuming call_esp32 returns the string "online" or similar
-        status_from_esp = call_esp32("status")
-        
-        if status_from_esp == "online":
-            return jsonify({"status": "online", "device": "esp32_feeder"}), 200
-        else:
-            return jsonify({"status": "offline", "error": "device_unresponsive"}), 503
+        resp = call_esp32("status")
+        data = resp.text.strip()
+        print(f"txt: {data}")
+
+        return jsonify({
+            "status":    "online",
+            "device":    "esp32_feeder",
+            "esp32":     data
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR 1: {e}")
+        return jsonify({
+            "status": "offline",
+            "error":  str(e)
+        }), 503
 
     except Exception as e:
-        return jsonify({"status": "offline", "error": str(e)}), 503
-
+        print(f"ERROR 2: {e}")
+        return jsonify({
+            "status": "offline",
+            "error":  str(e)
+        }), 503
 
 @app.route("/feed", methods=["GET", "POST"])
 def feed():
