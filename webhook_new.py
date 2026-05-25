@@ -258,6 +258,123 @@ def feed():
             }
         ), 500
 
+@app.route("/door-open", methods=["GET"])
+def doorOpen():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        resp = call_esp32("door-open")
+
+        # verify feed happened by checking status
+        time.sleep(2)
+        try:
+            status_resp = call_esp32("status")
+            status_data = status_resp.json()
+        except Exception:
+            status_data = {}
+
+        return jsonify(
+            {
+                "status": "success",
+                "esp32": resp.text,
+            }
+        ), 200
+
+    except requests.exceptions.RequestException as e:
+        send_ntfy(
+            f"Cat feeder ESP32 unreachable! Could not feed. Error: {str(e)}",
+            title="🐱 Feed Failed",
+        )
+        return jsonify(
+            {
+                "status": "error",
+                "message": f"Could not reach ESP32: {str(e)}",
+            }
+        ), 500
+
+@app.route("/door-close", methods=["GET"])
+def doorClose():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        resp = call_esp32("door-close")
+
+        # verify feed happened by checking status
+        time.sleep(2)
+        try:
+            status_resp = call_esp32("status")
+            status_data = status_resp.json()
+        except Exception:
+            status_data = {}
+
+        return jsonify(
+            {
+                "status": "success",
+                "esp32": resp.text,
+            }
+        ), 200
+
+    except requests.exceptions.RequestException as e:
+        send_ntfy(
+            f"Cat feeder ESP32 unreachable! Could not feed. Error: {str(e)}",
+            title="🐱 Feed Failed",
+        )
+        return jsonify(
+            {
+                "status": "error",
+                "message": f"Could not reach ESP32: {str(e)}",
+            }
+        ), 500
+
+@app.route("/dynamic-execute", methods=["POST"])
+def execute_command():
+    # 1. Security Check
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # 2. Extract parameters from the incoming request (JSON body)
+    data = request.get_json()
+    command = data.get("cmd")        # e.g., "feed", "door-open", "door-close"
+    f_delay = data.get("delay", 1000) # Default to 1000 if not provided
+
+    if not command:
+        return jsonify({"error": "Missing 'cmd' parameter"}), 400
+
+    try:
+        # 3. Call ESP32 dynamic API
+        # Sending as POST parameters to match the ESP32 setup
+        payload = {'cmd': command, 'delay': f_delay}
+        resp = requests.post(f"http://{ESP32_IP}/dynamic", data=payload, timeout=10)
+
+        # 4. Optional: Wait and verify status
+        time.sleep(1) 
+        try:
+            status_resp = requests.get(f"http://{ESP32_IP}/status", timeout=2)
+            print(f"status_resp: {status_resp}")
+            status_data = status_resp.text.strip()
+        except Exception as e:
+            print(f"Exception: {e}")
+            status_data = {"info": "Could not retrieve status"}
+
+        return jsonify({
+            "status": "success",
+            "command_sent": command,
+            "esp32_response": resp.text,
+            "current_state": status_data
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        send_ntfy(
+            f"Feeder command '{command}' failed! Error: {str(e)}",
+            title="🐱 Action Failed",
+        )
+        return jsonify({
+            "status": "error",
+            "message": f"Could not reach ESP32: {str(e)}"
+        }), 500
+
 
 @app.route("/health", methods=["GET"])
 def health():

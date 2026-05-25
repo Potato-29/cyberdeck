@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FH6 TELEMETRY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080c10;
+    --surface:  #0d1117;
+    --border:   #1a2332;
+    --accent:   #00d4ff;
+    --accent2:  #ff4444;
+    --green:    #00ff88;
+    --yellow:   #ffd700;
+    --orange:   #ff8c00;
+    --text:     #e8edf2;
+    --dim:      #4a5568;
+    --redline:  #ff2020;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+    height: 100dvh; /* Swapped to dynamic viewport height */
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── SCAN LINE OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ── STATUS BAR ── */
+  #statusbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    z-index: 100;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+  }
+
+  #statusbar .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.3s;
+  }
+  #statusbar .dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #statusbar .label { color: var(--dim); }
+  #statusbar .val   { color: var(--text); }
+  #statusbar .sep   { color: var(--border); }
+  #statusbar .title {
+    margin-left: auto;
+    margin-right: 85px; /* Offset to make space for fullscreen button */
+    color: var(--accent);
+    letter-spacing: 4px;
+    font-size: 10px;
+  }
+
+  /* ── FULLSCREEN TOGGLE BUTTON ── */
+  #fullscreen-btn {
+    position: fixed;
+    top: 3px;
+    right: 8px;
+    z-index: 1100;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s ease-in-out;
+  }
+  #fullscreen-btn:active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* ── MAIN LAYOUT (landscape-first) ── */
+  #app {
+    padding-top: 28px;
+    height: 100dvh; /* Swapped to dynamic viewport height */
+    display: grid;
+    grid-template-columns: 1fr 180px 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .panel {
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 8px; left: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--dim);
+  }
+
+  /* ── RPM GAUGE (center, spans both rows) ── */
+  #rpm-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  #rpm-arc-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+  }
+
+  #rpm-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-210deg);
+  }
+
+  #rpm-track {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 10;
+    stroke-linecap: round;
+  }
+
+  #rpm-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 226;
+    stroke-dashoffset: 226;
+    transition: stroke-dashoffset 0.08s linear, stroke 0.1s;
+    filter: drop-shadow(0 0 4px var(--accent));
+  }
+
+  #rpm-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #rpm-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  #rpm-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+
+  /* GEAR */
+  #gear-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 64px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(0,212,255,0.3);
+    transition: color 0.1s;
+  }
+
+  #gear-display.neutral { color: var(--dim); }
+  #gear-display.reverse { color: var(--accent2); }
+
+  /* REDLINE FLASH */
+  @keyframes redlineFlash {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(255, 32, 32, 0.08); }
+  }
+  #rpm-panel.redline { animation: redlineFlash 0.2s infinite; }
+
+  /* ── SPEED (top-left) ── */
+  #speed-panel { grid-column: 1; grid-row: 1; }
+
+  #speed-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(56px, 8vw, 80px);
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+
+  #speed-unit {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  /* ── THROTTLE / BRAKE (bottom-left) ── */
+  #inputs-panel {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 14px;
+    justify-content: center;
+  }
+
+  .input-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .input-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .input-track {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .input-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 1px;
+    transition: width 0.05s linear;
+  }
+
+  .throttle-fill { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .brake-fill    { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+  .input-pct {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── G-FORCE (top-right) ── */
+  #gforce-panel { grid-column: 3; grid-row: 1; }
+
+  #g-circle-wrap {
+    position: relative;
+    width: 110px;
+    height: 110px;
+  }
+
+  #g-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  #g-dot {
+    fill: var(--accent);
+    filter: drop-shadow(0 0 4px var(--accent));
+    transition: cx 0.06s linear, cy 0.06s linear;
+  }
+
+  #g-vals {
+    margin-top: 8px;
+    display: flex;
+    gap: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+  }
+
+  .g-val-item { text-align: center; }
+  .g-val-item .g-num { color: var(--accent); font-size: 16px; }
+  .g-val-item .g-lbl { color: var(--dim); font-size: 9px; letter-spacing: 2px; }
+
+  /* ── TIRES + LAP (bottom-right) ── */
+  #tirelap-panel {
+    grid-column: 3;
+    grid-row: 2;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  /* TIRE TEMPS */
+  #tire-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 8px;
+    width: 100%;
+  }
+
+  .tire-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .tire-box {
+    width: 36px;
+    height: 24px;
+    border-radius: 3px;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    transition: background 0.3s, color 0.3s;
+    border: 1px solid transparent;
+  }
+
+  .tire-pos {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--dim);
+  }
+
+  /* LAP TIMES */
+  #lap-section {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .lap-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .lap-lbl { font-size: 9px; letter-spacing: 2px; color: var(--dim); }
+  .lap-time { font-size: 14px; color: var(--text); }
+  .lap-time.current { color: var(--accent); }
+  .lap-time.best    { color: var(--green); }
+
+  /* ── PORTRAIT / SMALL SCREEN OVERRIDE ── */
+  @media (max-width: 600px) {
+    #app {
+      grid-template-columns: 1fr 120px 1fr;
+    }
+    #speed-val { font-size: 48px; }
+    #rpm-arc-wrap { width: 110px; height: 110px; }
+    #gear-display { font-size: 48px; }
+    #g-circle-wrap { width: 80px; height: 80px; }
+  }
+
+  @media (orientation: portrait) and (max-width: 768px) {
+    #app {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    #rpm-panel {
+      grid-column: 1 / 3;
+      grid-row: 1;
+      flex-direction: row;
+      gap: 20px;
+      padding: 16px;
+    }
+    #speed-panel  { grid-column: 1; grid-row: 2; }
+    #gforce-panel { grid-column: 2; grid-row: 2; }
+    #inputs-panel { grid-column: 1; grid-row: 3; }
+    #tirelap-panel{ grid-column: 2; grid-row: 3; }
+  }
+
+  /* ── OFFLINE STATE ── */
+  .offline-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 16, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    font-family: 'Share Tech Mono', monospace;
+    gap: 12px;
+    transition: opacity 0.5s;
+  }
+
+  .offline-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .offline-title {
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--dim);
+  }
+
+  .offline-msg {
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .blink {
+    animation: blink 1.2s infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+</style>
+</head>
+<body>
+
+<button id="fullscreen-btn" onclick="toggleFullscreen()">[FULLSCREEN]</button>
+
+<div id="statusbar">
+  <div class="dot" id="ws-dot"></div>
+  <span class="label">LAP</span> <span class="val" id="sb-lap">--</span>
+  <span class="sep">|</span>
+  <span class="label">POS</span> <span class="val" id="sb-pos">--</span>
+  <span class="sep">|</span>
+  <span class="label">BOOST</span> <span class="val" id="sb-boost">--</span>
+  <div class="title">FH6 TELEMETRY</div>
+</div>
+
+<div class="offline-overlay" id="offline">
+  <div class="offline-title">NO SIGNAL</div>
+  <div class="offline-msg blink">WAITING FOR TELEMETRY</div>
+  <div class="offline-title" style="font-size:9px; margin-top: 8px;">
+    Point FH6 Data Out → <span style="color:var(--text)" id="ws-url">...</span>
+  </div>
+</div>
+
+<div id="app">
+
+  <div class="panel" id="speed-panel" data-label="SPEED">
+    <div id="speed-val">0</div>
+    <div id="speed-unit">KM/H</div>
+  </div>
+
+  <div class="panel" id="rpm-panel" data-label="ENGINE">
+    <div id="rpm-arc-wrap">
+      <svg id="rpm-svg" viewBox="0 0 100 100">
+        <circle id="rpm-track" cx="50" cy="50" r="36"
+          stroke-dasharray="226" stroke-dashoffset="0"/>
+        <circle id="rpm-fill"  cx="50" cy="50" r="36"/>
+      </svg>
+      <div id="rpm-center">
+        <div id="rpm-val">0</div>
+        <div id="rpm-label">RPM</div>
+      </div>
+    </div>
+    <div id="gear-display" class="neutral">N</div>
+  </div>
+
+  <div class="panel" id="gforce-panel" data-label="G-FORCE">
+    <div id="g-circle-wrap">
+      <svg id="g-svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#1a2332" stroke-width="0.5"/>
+        <circle cx="50" cy="50" r="30" fill="none" stroke="#1a2332" stroke-width="0.5"/>
+        <circle cx="50" cy="50" r="15" fill="none" stroke="#1a2332" stroke-width="0.5"/>
+        <line x1="5" y1="50" x2="95" y2="50" stroke="#1a2332" stroke-width="0.5"/>
+        <line x1="50" y1="5" x2="50" y2="95" stroke="#1a2332" stroke-width="0.5"/>
+        <circle id="g-dot" cx="50" cy="50" r="4"/>
+      </svg>
+    </div>
+    <div id="g-vals">
+      <div class="g-val-item">
+        <div class="g-num" id="g-lat-val">0.0</div>
+        <div class="g-lbl">LAT</div>
+      </div>
+      <div class="g-val-item">
+        <div class="g-num" id="g-lon-val">0.0</div>
+        <div class="g-lbl">LON</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="inputs-panel" data-label="INPUTS">
+    <div class="input-row">
+      <div class="input-label">THR</div>
+      <div class="input-track">
+        <div class="input-fill throttle-fill" id="throttle-bar"></div>
+      </div>
+      <div class="input-pct" id="throttle-pct">0%</div>
+    </div>
+    <div class="input-row">
+      <div class="input-label">BRK</div>
+      <div class="input-track">
+        <div class="input-fill brake-fill" id="brake-bar"></div>
+      </div>
+      <div class="input-pct" id="brake-pct">0%</div>
+    </div>
+  </div>
+
+  <div class="panel" id="tirelap-panel" data-label="TIRES / LAP">
+    <div id="tire-grid">
+      <div class="tire-cell">
+        <div class="tire-box" id="tire-fl">--</div>
+        <div class="tire-pos">FL</div>
+      </div>
+      <div class="tire-cell">
+        <div class="tire-box" id="tire-fr">--</div>
+        <div class="tire-pos">FR</div>
+      </div>
+      <div class="tire-cell">
+        <div class="tire-box" id="tire-rl">--</div>
+        <div class="tire-pos">RL</div>
+      </div>
+      <div class="tire-cell">
+        <div class="tire-box" id="tire-rr">--</div>
+        <div class="tire-pos">RR</div>
+      </div>
+    </div>
+    <div id="lap-section">
+      <div class="lap-row">
+        <div class="lap-lbl">CUR</div>
+        <div class="lap-time current" id="lap-cur">--:--.---</div>
+      </div>
+      <div class="lap-row">
+        <div class="lap-lbl">LST</div>
+        <div class="lap-time" id="lap-last">--:--.---</div>
+      </div>
+      <div class="lap-row">
+        <div class="lap-lbl">BST</div>
+        <div class="lap-time best" id="lap-best">--:--.---</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const WS_HOST = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+
+// ── ELEMENTS ──────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const els = {
+  offline:     $('offline'),
+  wsDot:        $('ws-dot'),
+  wsUrl:        $('ws-url'),
+  sbLap:        $('sb-lap'),
+  sbPos:        $('sb-pos'),
+  sbBoost:      $('sb-boost'),
+  speedVal:     $('speed-val'),
+  rpmFill:      $('rpm-fill'),
+  rpmVal:       $('rpm-val'),
+  gearDisplay:  $('gear-display'),
+  rpmPanel:     $('rpm-panel'),
+  throttleBar:  $('throttle-bar'),
+  brakeBar:     $('brake-bar'),
+  throttlePct:  $('throttle-pct'),
+  brakePct:     $('brake-pct'),
+  gDot:         $('g-dot'),
+  gLatVal:      $('g-lat-val'),
+  gLonVal:      $('g-lon-val'),
+  tireFL:       $('tire-fl'),
+  tireFR:       $('tire-fr'),
+  tireRL:       $('tire-rl'),
+  tireRR:       $('tire-rr'),
+  lapCur:       $('lap-cur'),
+  lapLast:      $('lap-last'),
+  lapBest:      $('lap-best'),
+};
+
+els.wsUrl.textContent = WS_HOST;
+
+// ── NATIVE FULLSCREEN LOGIC ───────────────────────────────
+function toggleFullscreen() {
+  const btn = $('fullscreen-btn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen()
+      .then(() => {
+        btn.textContent = '[WINDOWED]';
+      })
+      .catch(err => {
+        console.error(`Error forcing full-screen view: ${err.message}`);
+      });
+  } else {
+    document.exitFullscreen();
+    btn.textContent = '[FULLSCREEN]';
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function fmtLap(s) {
+  if (!s || s <= 0) return '--:--.---';
+  const m = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(3).padStart(6, '0');
+  return `${m}:${sec}`;
+}
+
+function tireColor(temp) {
+  if (!temp || temp <= 0) return { bg: '#1a2332', fg: '#4a5568', border: 'transparent' };
+  if (temp < 60)  return { bg: '#0a1628', fg: '#4488cc', border: '#1a3a6a' };
+  if (temp < 80)  return { bg: '#0a2a1a', fg: '#00ff88', border: '#1a5a3a' };
+  if (temp < 100) return { bg: '#2a1a00', fg: '#ffd700', border: '#5a3a00' };
+  return { bg: '#2a0a0a', fg: '#ff4444', border: '#5a1a1a' };
+}
+
+function setTire(el, temp) {
+  const { bg, fg, border } = tireColor(temp);
+  el.style.background   = bg;
+  el.style.color        = fg;
+  el.style.borderColor  = border;
+  el.textContent        = temp > 0 ? `${Math.round(temp)}°` : '--';
+}
+
+const ARC_LEN = 226;
+
+function setRpm(rpm, maxRpm, idleRpm) {
+  const pct = Math.max(0, Math.min(1, (rpm - idleRpm) / Math.max(maxRpm - idleRpm, 1)));
+  const offset = ARC_LEN - (pct * ARC_LEN * 0.83);
+  els.rpmFill.style.strokeDashoffset = offset;
+
+  const redlinePct = 0.90;
+  if (pct >= redlinePct) {
+    els.rpmFill.style.stroke = 'var(--redline)';
+    els.rpmFill.style.filter = 'drop-shadow(0 0 6px var(--redline))';
+    els.rpmPanel.classList.add('redline');
+  } else if (pct >= 0.75) {
+    els.rpmFill.style.stroke = 'var(--orange)';
+    els.rpmFill.style.filter = 'drop-shadow(0 0 4px var(--orange))';
+    els.rpmPanel.classList.remove('redline');
+  } else if (pct >= 0.55) {
+    els.rpmFill.style.stroke = 'var(--yellow)';
+    els.rpmFill.style.filter = 'drop-shadow(0 0 4px var(--yellow))';
+    els.rpmPanel.classList.remove('redline');
+  } else {
+    els.rpmFill.style.stroke = 'var(--accent)';
+    els.rpmFill.style.filter = 'drop-shadow(0 0 4px var(--accent))';
+    els.rpmPanel.classList.remove('redline');
+  }
+
+  els.rpmVal.textContent = Math.round(rpm / 100) * 100;
+}
+
+function setGear(gear) {
+  els.gearDisplay.classList.remove('neutral', 'reverse');
+  if (gear === 0) {
+    els.gearDisplay.textContent = 'N';
+    els.gearDisplay.classList.add('neutral');
+  } else if (gear === 11) {
+    els.gearDisplay.textContent = 'R';
+    els.gearDisplay.classList.add('reverse');
+  } else {
+    els.gearDisplay.textContent = gear;
+  }
+}
+
+function setGForce(gLat, gLon) {
+  const MAX_G = 3;
+  const cx = 50 + Math.max(-45, Math.min(45, (gLat / MAX_G) * 45));
+  const cy = 50 - Math.max(-45, Math.min(45, (gLon / MAX_G) * 45));
+  els.gDot.setAttribute('cx', cx.toFixed(1));
+  els.gDot.setAttribute('cy', cy.toFixed(1));
+  els.gLatVal.textContent = Math.abs(gLat).toFixed(1);
+  els.gLonVal.textContent = Math.abs(gLon).toFixed(1);
+}
+
+// ── UPDATE UI ─────────────────────────────────────────────
+function update(d) {
+  els.speedVal.textContent = Math.round(d.speed_kmh);
+  setRpm(d.rpm, d.maxRpm, d.idleRpm);
+  setGear(d.gear);
+
+  els.throttleBar.style.width = d.throttle + '%';
+  els.brakeBar.style.width    = d.brake + '%';
+  els.throttlePct.textContent = Math.round(d.throttle) + '%';
+  els.brakePct.textContent    = Math.round(d.brake) + '%';
+
+  setGForce(d.gLat, d.gLon);
+
+  setTire(els.tireFL, d.tireFL);
+  setTire(els.tireFR, d.tireFR);
+  setTire(els.tireRL, d.tireRL);
+  setTire(els.tireRR, d.tireRR);
+
+  els.lapCur.textContent  = fmtLap(d.currentLap);
+  els.lapLast.textContent = fmtLap(d.lastLap);
+  els.lapBest.textContent = fmtLap(d.bestLap);
+
+  els.sbLap.textContent   = d.lapNumber || '--';
+  els.sbPos.textContent   = d.position  || '--';
+  els.sbBoost.textContent = d.boost > 0 ? d.boost.toFixed(1) : '--';
+}
+
+// ── WEBSOCKET ─────────────────────────────────────────────
+let ws, reconnectTimer;
+
+function connect() {
+  ws = new WebSocket(WS_HOST);
+
+  ws.onopen = () => {
+    console.log('[WS] Connected');
+    els.wsDot.classList.add('live');
+  };
+
+  ws.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.isRaceOn) {
+        els.offline.classList.add('hidden');
+      }
+      update(d);
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    console.log('[WS] Disconnected — retrying in 2s');
+    els.wsDot.classList.remove('live');
+    els.offline.classList.remove('hidden');
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+connect();
+</script>
+</body>
+</html>
