@@ -1,8 +1,37 @@
-import requests
+import os
 import sys
+from pathlib import Path
+
+import requests
+
+
+def load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    with path.open(encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+def require_env(name: str) -> str:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+_env_path = Path(__file__).resolve().parent / ".env"
+load_env_file(_env_path)
 
 # --- CONFIG ---
-PC_IP = "192.168.1.6" # Replace with your actual PC IP
+PC_IP = require_env("PC_IP")
 PORT = "8085"
 
 # ANSI Color Codes for terminal prettification
