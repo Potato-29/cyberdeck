@@ -54,9 +54,10 @@ GROQ_URL = os.environ.get(
 )
 STANDUP_MODEL = os.environ.get("STANDUP_MODEL", "llama-3.3-70b-versatile")
 
-_ntfy_base = os.environ.get("NTFY_URL", "").rstrip("/")
-_ntfy_topic = os.environ.get("NTFY_TOPIC", "")
-NTFY_URL = f"{_ntfy_base}/{_ntfy_topic}" if _ntfy_base and _ntfy_topic else ""
+# JSON publishing posts to the server root with the topic in the body, so the
+# base and topic are kept apart rather than joined into one URL.
+NTFY_BASE = os.environ.get("NTFY_URL", "").rstrip("/")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 NTFY_USER = os.environ.get("NTFY_USER", "")
 NTFY_PASS = os.environ.get("NTFY_PASS", "")
 
@@ -156,23 +157,48 @@ def _public(entry):
 
 
 # ── ntfy ─────────────────────────────────────────────────
+# ntfy's JSON priorities are 1-5; the header API uses these names.
+PRIORITIES = {"min": 1, "low": 2, "default": 3, "high": 4, "max": 5, "urgent": 5}
+
+
 def push(message, title, priority="default", click=None, action_label=None):
-    if not NTFY_URL:
+    """Publish via ntfy's JSON endpoint.
+
+    Everything travels in the body rather than in headers: HTTP headers are
+    latin-1 only, so an emoji in the title raises UnicodeEncodeError before the
+    request ever leaves the process.
+    """
+    if not NTFY_BASE or not NTFY_TOPIC:
         return False
-    headers = {"Title": title, "Priority": priority}
+
+    payload = {
+        "topic": NTFY_TOPIC,
+        "title": title,
+        "message": message,
+        "priority": PRIORITIES.get(priority, 3),
+    }
     if click:
-        headers["Click"] = click
-        headers["Actions"] = f"view, {action_label or 'Open'}, {click}, clear=true"
+        payload["click"] = click
+        payload["actions"] = [{
+            "action": "view",
+            "label": action_label or "Open",
+            "url": click,
+            "clear": True,
+        }]
+
     try:
-        requests.post(
-            NTFY_URL,
-            data=message.encode("utf-8"),
-            headers=headers,
+        resp = requests.post(
+            NTFY_BASE,
+            json=payload,
             auth=(NTFY_USER, NTFY_PASS),
             timeout=5,
         )
+        if resp.status_code >= 400:
+            print(f"[standup] ntfy {resp.status_code}: {resp.text[:200]}")
+            return False
         return True
-    except requests.exceptions.RequestException:
+    except Exception as exc:  # never let a failed notification 500 the caller
+        print(f"[standup] ntfy failed: {exc}")
         return False
 
 

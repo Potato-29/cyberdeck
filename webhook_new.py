@@ -49,6 +49,8 @@ TELEMETRY_FILE = os.path.expanduser("~/pc-telemetry-monitor.py")
 _ntfy_base = require_env("NTFY_URL").rstrip("/")
 _ntfy_topic = require_env("NTFY_TOPIC")
 NTFY_URL = f"{_ntfy_base}/{_ntfy_topic}"
+# ntfy's JSON API takes numeric priorities; the header API used these names.
+NTFY_PRIORITIES = {"min": 1, "low": 2, "default": 3, "high": 4, "max": 5, "urgent": 5}
 NTFY_USER = require_env("NTFY_USER")
 NTFY_PASS = require_env("NTFY_PASS")
 RESTART_URL = require_env("RESTART_URL").rstrip("/")
@@ -113,19 +115,28 @@ def verify_token(req):
 
 
 def send_ntfy(message, title="⚠️ Cyberdeck Alert", priority="high"):
+    """Publish via ntfy's JSON endpoint.
+
+    Title and message go in the body, not in headers: HTTP headers are latin-1
+    only, so an emoji title raises UnicodeEncodeError before the request is sent.
+    Every caller here uses one, so the header form never delivered at all.
+    """
     try:
-        requests.post(
-            NTFY_URL,
-            data=message,
-            headers={
-                "Title": title,
-                "Priority": priority,
+        resp = requests.post(
+            _ntfy_base,
+            json={
+                "topic": _ntfy_topic,
+                "title": title,
+                "message": message,
+                "priority": NTFY_PRIORITIES.get(priority, 3),
             },
             auth=(NTFY_USER, NTFY_PASS),
             timeout=5,
         )
-    except Exception:
-        pass
+        if resp.status_code >= 400:
+            print(f"[ntfy] {resp.status_code}: {resp.text[:200]}")
+    except Exception as exc:
+        print(f"[ntfy] send failed: {exc}")
 
 
 def call_esp32(endpoint, retries=3):

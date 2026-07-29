@@ -8,9 +8,9 @@ set +a
 SERVICES=(
     "sshd|pgrep -x sshd"
     "cloudflared|pgrep -f cloudflared"
-    "picoclaw|tmux has-session -t picoclaw"
+    
     "ntfy|pgrep -f '[n]tfy serve'"
-    "battery_alert|pgrep -f battery_alert.sh"
+    
 )
 
 for entry in "${SERVICES[@]}"; do
