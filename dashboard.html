@@ -326,14 +326,21 @@
   /* Close affordance appears only while running */
   .deck-close {
     position: absolute;
-    top: 4px; left: 6px;
+    top: 0; left: 0;
+    /* Padded rather than sized, so the tap target clears ~30px square without
+       shifting the glyph away from the corner */
+    padding: 5px 9px;
     font-size: 11px;
+    line-height: 1;
     color: var(--dim);
     opacity: 0;
     transition: opacity 0.15s ease, color 0.15s ease;
   }
-  .deck-tile.running:hover .deck-close { opacity: 1; }
   .deck-close:hover { color: var(--danger); }
+  /* Revealing this on hover alone strands it on a touchscreen, where no hover
+     event ever fires — there, show it outright whenever the tile is running. */
+  @media (hover: hover) { .deck-tile.running:hover .deck-close { opacity: 1; } }
+  @media (hover: none)  { .deck-tile.running .deck-close       { opacity: 1; } }
 
   /* ── DATA ITEMS ── */
   .data-row {
@@ -523,6 +530,50 @@
     #rss-panel        { grid-column: 3; }
     #forza-panel      { grid-column: 1 / -1; }
     #deck-panel       { grid-column: 1 / -1; }
+  }
+
+  /* ── PORTRAIT PHONES ──
+     A phone in landscape is ~840px wide and lands in the three-column layout
+     above, which already reads well. Everything here is scoped below that: one
+     column, a header that fits, and controls big enough to hit with a thumb.
+     Declared last so it overrides the !important rules in the 768px block. */
+  @media (max-width: 560px) {
+    :root { --deck-h: 44px; }
+
+    /* Uptime is dropped rather than shrunk — the SYSTEM panel already shows it,
+       and reclaiming that width is what lets the rest of the bar fit. */
+    #header { padding: 0 10px; gap: 10px; }
+    #header .logo { font-size: 12px; letter-spacing: 1.5px; }
+    .header-sep, #header .uptime { display: none; }
+    #header .clock-live { font-size: 11px; letter-spacing: 1px; }
+    .fullscreen-toggle { font-size: 9px; padding: 4px 6px; }
+
+    /* Equal-width tabs filling the full 44px bar, so the hit area is the button */
+    .deck-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 0 2px;
+    }
+
+    /* Single column: at this width two columns leave ~163px of panel content,
+       which runs data labels straight into their values. */
+    #app {
+      grid-template-columns: 1fr !important;
+      gap: 8px;
+      padding: 8px 8px 24px;
+    }
+    #app > .panel { grid-column: 1 / -1 !important; }
+    /* 160px leaves dead space under short panels once they're full-width */
+    .panel { min-height: unset; padding: 10px; }
+
+    /* Narrower tracks keep three tiles per row down to a 360px screen */
+    #deck-grid     { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    #services-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
   }
 </style>
 </head>
@@ -1012,13 +1063,29 @@ let lastForzaPacketTime = 0;
 let forzaTimeoutCheck = null;
 
 function initForzaWebSocket() {
+  // Telemetry rides a plain ws:// socket on port 8000. A page served over https
+  // (i.e. through the cloudflared tunnel) can neither reach that port nor open an
+  // insecure socket — the browser blocks it as mixed content and the constructor
+  // throws synchronously. Bail early so telemetry sits OFFLINE instead of killing
+  // the rest of the script.
+  if (window.location.protocol === 'https:') {
+    setForzaOffline();
+    return;
+  }
+
   // Connect directly to the local python listener server running on port 8000
   // Note: Replace 'localhost' with your cyberdeck's actual IP if viewing on another device
-  const targetHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'localhost:8000' 
+  const targetHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'localhost:8000'
     : window.location.hostname + ':8000';
 
-  forzaWS = new WebSocket(`ws://${targetHost}/ws`);
+  try {
+    forzaWS = new WebSocket(`ws://${targetHost}/ws`);
+  } catch (err) {
+    console.error('[Forza WS] Socket construction refused by browser', err);
+    setForzaOffline();
+    return;
+  }
 
   forzaWS.onopen = () => {
     console.log("[Forza WS] Connected to telemetry backend loop.");
@@ -1102,17 +1169,19 @@ function startForzaWatchdog() {
   }, 1000);
 }
 
-// Fire up listeners on interface execution
-initForzaWebSocket();
-startForzaWatchdog();
-
 // ── POLLING ──
+// Started first, deliberately: nothing below this may be allowed to prevent the
+// dashboard from populating.
 fetchData();
 setInterval(fetchData, 4000);
 
 // Deck polls slower — each call shells out to tasklist on the PC
 fetchDeck();
 setInterval(fetchDeck, 8000);
+
+// Fire up telemetry listeners last
+initForzaWebSocket();
+startForzaWatchdog();
 </script>
 
 </body>
