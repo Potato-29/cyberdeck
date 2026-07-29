@@ -139,6 +139,34 @@ Every failure path (no key, bad key, rate limit, dead model, network drop, garbl
 reply) falls back to the note-grouped template, so Friday never leaves you with
 nothing.
 
+## Testing
+
+`test-standup.sh` exercises every endpoint. It deletes the entries it creates and
+rebuilds the weekly cache afterwards, so it is safe to run against the live log.
+
+```bash
+bash test-standup.sh                                  # localhost:2122, no pushes
+bash test-standup.sh https://restart.prayas.space     # through the tunnel
+bash test-standup.sh http://127.0.0.1:2122 --push     # also fire both ntfy pushes
+```
+
+It regenerates the draft, so each run costs one model call (two with `--push`).
+
+Things the script can't check — do these by eye once:
+
+- The log page on your phone: tag chips switch, `[SAVE ENTRY]` clears the box,
+  `×` deletes, the FRIDAY DRAFT tab and `[COPY]` work.
+- Tapping the ntfy notification opens the page **already logged in** — if you get
+  a 401, the click URL lost its token.
+- `note.ps1` from the PC, including `-List`.
+
+To test the cron wiring without waiting for Friday, add a line a couple of minutes
+out, confirm the push lands, then restore the real schedule:
+
+```cron
+*/2 * * * * curl -sf -X POST 'http://127.0.0.1:2122/standup/friday?token=<token>' >/dev/null
+```
+
 ## Troubleshooting
 
 | Symptom | Cause |

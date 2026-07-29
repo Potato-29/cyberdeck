@@ -31,6 +31,7 @@ These files mirror what typically lives under `~` on the device. They load secre
 | `pc-deck-agent.py` + `deck-apps.json` | **Runs on the PC** — whitelisted app launcher (port 8086) |
 | `standup.py` + `standup.html` | Daily work log, Friday update generator (blueprint on 2122) |
 | `note.ps1` | **Runs on the PC** — log a standup note from the terminal |
+| `test-standup.sh` | Non-destructive smoke test for the standup endpoints |
 | `sketch_may1a/` | ESP32 cat feeder firmware |
 
 Copy `.env.example` to `.env` and fill in values before deploying.
