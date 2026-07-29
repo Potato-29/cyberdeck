@@ -2,7 +2,7 @@ import requests
 import sys
 
 # --- CONFIG ---
-PC_IP = "192.168.1.9" # Replace with your actual PC IP
+PC_IP = "192.168.1.6" # Replace with your actual PC IP
 PORT = "8085"
 
 # ANSI Color Codes for terminal prettification

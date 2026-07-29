@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIP-DECK 3000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #050a06;
+    --surface:  #0a120c;
+    --border:   #1a3a1a;
+    --accent:   #15ff00;
+    --accent-dim:#0a6b00;
+    --text:     #b8ffb8;
+    --dim:      #3a6a3a;
+    --warn:     #ffb000;
+    --danger:   #ff3333;
+    --blue:     #00ccff;
+    --header-h: 38px;
+    --deck-h:   34px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  /* ── CRT SCANLINES ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .scanline-flicker {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    z-index: 9998;
+    animation: flicker 8s infinite;
+  }
+  @keyframes flicker {
+    0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% { opacity: 0; }
+    20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.04; }
+  }
+
+  /* ── HEADER ── */
+  #header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent-dim);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    box-shadow: 0 2px 16px rgba(21,255,0,0.08);
+  }
+  #header .logo {
+    font-size: 15px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent), 0 0 30px var(--accent-dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .blink-cursor::after {
+    content: '█';
+    animation: blink 1s infinite;
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--accent);
+  }
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  #header .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+  }
+  #header .clock-live {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .header-sep {
+    color: var(--dim);
+    margin: 0 4px;
+  }
+  #header .uptime {
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .fullscreen-toggle {
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+  }
+  .fullscreen-toggle:hover {
+    background: rgba(21, 255, 0, 0.1);
+  }
+
+  /* ── COOL DECK SELECTOR ROW ── */
+  #deck-selector {
+    display: flex;
+    justify-content: space-around;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    height: var(--deck-h);
+    align-items: center;
+    box-shadow: inset 0 -5px 10px rgba(0,0,0,0.5);
+  }
+  .deck-btn {
+    color: var(--dim);
+    font-size: 12px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+  .deck-btn.active {
+    color: var(--accent);
+    border-color: var(--border) var(--border) var(--bg) var(--border);
+    background: var(--bg);
+    text-shadow: 0 0 6px var(--accent);
+    font-weight: bold;
+  }
+
+  /* ── MAIN GRID ── */
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    padding: 10px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    min-height: 160px;
+  }
+  .panel::before {
+    content: attr(data-title);
+    display: block;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    text-shadow: 0 0 4px var(--accent-dim);
+  }
+  .panel:hover {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 20px rgba(21,255,0,0.03), 0 0 8px rgba(21,255,0,0.06);
+  }
+
+  /* Services panel - spans full grid */
+  #services-panel {
+    grid-column: 1 / -1;
+    min-height: unset;
+  }
+  #services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px 12px;
+  }
+  .svc-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .svc-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .svc-dot.up   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .svc-dot.down { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  .svc-name { color: var(--text); }
+  .svc-name.down-svc { color: var(--danger); }
+
+  /* Battery + WiFi row */
+  #battery-panel    { grid-column: 1; }
+  #wifi-panel       { grid-column: 2; }
+
+  /* PC Vitals + System Info */
+  #pc-panel         { grid-column: 1; }
+  #sysinfo-panel    { grid-column: 2; }
+  #weather-panel    { grid-column: 3; }
+
+  /* Resources + RSS */
+  #resources-panel  { grid-column: 1 / 3; }
+  #rss-panel        { grid-column: 3; }
+  
+  /* Forza Telemetry HUD Widget Element */
+  #forza-panel {
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  #forza-panel:hover {
+    border-color: var(--blue);
+    box-shadow: inset 0 0 20px rgba(0,204,255,0.05), 0 0 10px rgba(0,204,255,0.15);
+  }
+  .forza-link-btn {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--blue);
+    border: 1px dashed rgba(0, 204, 255, 0.3);
+    padding: 6px;
+    background: rgba(0, 204, 255, 0.02);
+  }
+
+  /* ── DATA ITEMS ── */
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 13px;
+  }
+  .data-label { color: var(--dim); letter-spacing: 1px; }
+  .data-val   { color: var(--accent); font-weight: bold; }
+  .data-val.warn  { color: var(--warn); }
+  .data-val.danger { color: var(--danger); }
+  .data-val.offline { color: var(--danger); animation: blink 1.5s infinite; }
+  .data-val.telemetry { color: var(--blue); }
+
+  /* Battery bar */
+  .battery-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .battery-body {
+    width: 40px; height: 18px;
+    border: 2px solid var(--accent);
+    border-radius: 2px;
+    position: relative;
+    display: inline-block;
+    box-shadow: inset 0 0 4px rgba(21,255,0,0.2);
+  }
+  .battery-body::after {
+    content: '';
+    position: absolute;
+    right: -5px; top: 3px;
+    width: 4px; height: 8px;
+    background: var(--accent);
+    border-radius: 0 1px 1px 0;
+  }
+  .battery-fill {
+    height: 100%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    transition: width 0.5s;
+  }
+
+  /* Progress bars */
+  .bar-wrap {
+    margin: 6px 0;
+  }
+  .bar-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+  .bar-track {
+    height: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.4s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .bar-fill.low   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .bar-fill.med   { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .bar-fill.high  { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+  /* RSS Feed */
+  #rss-list {
+    list-style: none;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  #rss-list li {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #rss-list li:last-child { border-bottom: none; }
+  #rss-list a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  #rss-list a:hover { color: var(--accent); }
+  .rss-date {
+    font-size: 10px;
+    color: var(--dim);
+    margin-right: 6px;
+  }
+
+  /* Weather */
+  .weather-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .weather-temp {
+    font-size: 36px;
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent);
+    line-height: 1;
+  }
+  .weather-desc {
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+  .weather-detail {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  /* Big stat */
+  .big-stat {
+    font-size: 28px;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent);
+    line-height: 1.1;
+  }
+  .big-stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+
+  /* fallback visual fullscreen mode if browser blocks real API requests */
+  .fallback-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    overflow-y: auto !important;
+    background: var(--bg);
+  }
+
+  /* ── RESPONSIVE & MOBILE SMART LAYOUTS ── */
+  @media (max-width: 768px) {
+    #deck-selector { display: flex; }
+    
+    .panel.deck-hidden {
+      display: none !important;
+    }
+
+    #app { 
+      grid-template-columns: 1fr 1fr; 
+      gap: 8px;
+      padding: 8px;
+    }
+    
+    /* Services, Resources, and RSS always fit full width on mobile screens */
+    #services-panel, #resources-panel, #rss-panel, #forza-panel { 
+      grid-column: 1 / -1 !important; 
+    }
+    
+    /* Force explicitly paired panels into side-by-side positioning when visible */
+    #battery-panel { grid-column: 1 !important; }
+    #wifi-panel    { grid-column: 2 !important; }
+    
+    #pc-panel      { grid-column: 1 !important; }
+    #sysinfo-panel { grid-column: 2 !important; }
+    
+    #weather-panel { grid-column: 1 / -1 !important; }
+  }
+
+  @media (min-width: 769px) {
+    #deck-selector { display: none; }
+    .panel.deck-hidden { display: block !important; }
+    #app { grid-template-columns: 1fr 1fr 1fr; }
+    #services-panel { grid-column: 1 / -1; }
+    #battery-panel    { grid-column: 1; }
+    #wifi-panel       { grid-column: 2; }
+    #pc-panel         { grid-column: 1; }
+    #sysinfo-panel    { grid-column: 2; }
+    #weather-panel    { grid-column: 3; }
+    #resources-panel  { grid-column: 1 / 3; }
+    #rss-panel        { grid-column: 3; }
+    #forza-panel      { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="scanline-flicker"></div>
+
+<div id="header">
+  <div class="status-dot" id="global-dot"></div>
+  <span class="logo blink-cursor">PIP-DECK 3000</span>
+  <span class="header-sep">|</span>
+  <span class="uptime" id="header-uptime">UPTIME --</span>
+  <span class="clock-live" id="header-clock">00:00:00</span>
+  <span class="fullscreen-toggle" id="fullscreen-btn">[FULLSCREEN]</span>
+</div>
+
+<div id="deck-selector">
+  <div class="deck-btn active" onclick="switchDeck('core')">[CORE]</div>
+  <div class="deck-btn" onclick="switchDeck('sys')">[VITAL]</div>
+  <div class="deck-btn" onclick="switchDeck('env')">[PERIPH]</div>
+</div>
+
+<div id="app">
+
+  <div class="panel" id="services-panel" data-title="[ SERVICES ]" data-deck="core">
+    <div id="services-grid"></div>
+  </div>
+
+  <div class="panel" id="battery-panel" data-title="[ BATTERY ]" data-deck="core">
+    <div class="data-row"><span class="data-label">Level</span>
+      <span class="data-val" id="bat-level">--</span></div>
+    <div class="battery-icon" style="margin:8px 0">
+      <div class="battery-body"><div class="battery-fill" id="bat-fill" style="width:0%"></div></div>
+    </div>
+    <div class="data-row"><span class="data-label">Status</span>
+      <span class="data-val" id="bat-status">--</span></div>
+    <div class="data-row"><span class="data-label">Health</span>
+      <span class="data-val" id="bat-health">--</span></div>
+    <div class="data-row"><span class="data-label">Temp</span>
+      <span class="data-val" id="bat-temp">--</span></div>
+  </div>
+
+  <div class="panel" id="wifi-panel" data-title="[ WIFI ]" data-deck="core">
+    <div class="data-row"><span class="data-label">SSID</span>
+      <span class="data-val" id="wifi-ssid">--</span></div>
+    <div class="data-row"><span class="data-label">IP</span>
+      <span class="data-val" id="wifi-ip">--</span></div>
+    <div class="data-row"><span class="data-label">Signal</span>
+      <span class="data-val" id="wifi-rssi">--</span></div>
+    <div class="data-row"><span class="data-label">Speed</span>
+      <span class="data-val" id="wifi-speed">--</span></div>
+  </div>
+
+  <div class="panel" id="pc-panel" data-title="[ PC VITALS ]" data-deck="sys">
+    <div class="data-row"><span class="data-label">CPU</span>
+      <span class="data-val" id="pc-cpu">--</span></div>
+    <div class="data-row"><span class="data-label">GPU</span>
+      <span class="data-val" id="pc-gpu">--</span></div>
+    <div class="data-row"><span class="data-label">RAM</span>
+      <span class="data-val" id="pc-ram">--</span></div>
+    <div class="data-row"><span class="data-label">FAN</span>
+      <span class="data-val" id="pc-fan">--</span></div>
+  </div>
+
+  <div class="panel" id="sysinfo-panel" data-title="[ SYSTEM ]" data-deck="sys">
+    <div class="data-row"><span class="data-label">Uptime</span>
+      <span class="data-val" id="sys-uptime">--</span></div>
+    <div class="data-row"><span class="data-label">Disk</span>
+      <span class="data-val" id="sys-disk">--</span></div>
+    <div class="data-row"><span class="data-label">Memory</span>
+      <span class="data-val" id="sys-mem">--</span></div>
+  </div>
+
+  <div class="panel" id="resources-panel" data-title="[ SYSTEM RESOURCES ]" data-deck="sys">
+    <div class="bar-wrap">
+      <div class="bar-label-row"><span>CPU</span><span id="res-cpu-pct">--%</span></div>
+      <div class="bar-track"><div class="bar-fill low" id="res-cpu-bar" style="width:0%"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label-row"><span>RAM</span><span id="res-mem-pct">--%</span></div>
+      <div class="bar-track"><div class="bar-fill low" id="res-mem-bar" style="width:0%"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label-row"><span>Disk</span><span id="res-disk-pct">--%</span></div>
+      <div class="bar-track"><div class="bar-fill low" id="res-disk-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="panel" id="weather-panel" data-title="[ AHMEDABAD ]" data-deck="env">
+    <div class="weather-main">
+      <div class="weather-temp" id="wx-temp">--°</div>
+      <div>
+        <div class="weather-desc" id="wx-desc">--</div>
+        <div class="weather-detail"><span id="wx-hum">--</span> humidity</div>
+        <div class="weather-detail">Feels <span id="wx-feels">--</span></div>
+      </div>
+    </div>
+  </div>
+
+ <!-- FORZA LIVE TELEMETRY (Periph View) -->
+  <div class="panel" id="forza-panel" data-title="[ FORZA TELEMETRY LINK ]" data-deck="env" onclick="window.open('https://race.prayas.space', '_blank')">
+    <div class="data-row"><span class="data-label">Feed Connection</span>
+      <span class="data-val offline" id="forza-status">OFFLINE</span></div>
+    <div class="data-row"><span class="data-label">Current Engine RPM</span>
+      <span class="data-val offline" id="forza-rpm">OFFLINE</span></div>
+    <div class="data-row"><span class="data-label">Current Velocity</span>
+      <span class="data-val offline" id="forza-speed">OFFLINE</span></div>
+    <div class="data-row"><span class="data-label">Active Gear Assignment</span>
+      <span class="data-val offline" id="forza-gear">OFFLINE</span></div>
+    <div class="forza-link-btn">
+      &gt;&gt; [LAUNCH EXTERNAL HUD DASHBOARD] &lt;&lt;
+    </div>
+  </div>
+
+  <div class="panel" id="rss-panel" data-title="[ TECH NEWS ]" data-deck="env">
+    <ul id="rss-list">
+      <li><span style="color:var(--dim)">Loading feed...</span></li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// ── LIVE CLOCK ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById('header-clock').textContent =
+    now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── FULLSCREEN TOGGLE ──
+const fsBtn = document.getElementById('fullscreen-btn');
+fsBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen()
+      .then(() => {
+        fsBtn.textContent = '[EXIT WINDOW]';
+      })
+      .catch(() => {
+        document.documentElement.classList.toggle('fallback-fullscreen');
+        fsBtn.textContent = document.documentElement.classList.contains('fallback-fullscreen') ? '[EXIT WINDOW]' : '[FULLSCREEN]';
+      });
+  } else {
+    document.exitFullscreen().then(() => {
+      fsBtn.textContent = '[FULLSCREEN]';
+    });
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    fsBtn.textContent = '[FULLSCREEN]';
+  }
+});
+
+// ── ROTARY TACTICAL DECK MANAGEMENT ──
+const totalDecks = ['core', 'sys', 'env'];
+let currentDeckIndex = 0;
+
+function switchDeck(deckName) {
+  currentDeckIndex = totalDecks.indexOf(deckName);
+  
+  const buttons = document.querySelectorAll('.deck-btn');
+  buttons.forEach((btn, index) => {
+    if(index === currentDeckIndex) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+
+  const panels = document.querySelectorAll('.panel');
+  panels.forEach(panel => {
+    if (panel.getAttribute('data-deck') === deckName) {
+      panel.classList.remove('deck-hidden');
+    } else {
+      panel.classList.add('deck-hidden');
+    }
+  });
+}
+
+// ── SWIPE LEFT / RIGHT RECOGNITION ──
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].screenX;
+}, false);
+
+document.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipeGesture();
+}, false);
+
+function handleSwipeGesture() {
+  const swipeThreshold = 60; 
+  if (touchStartX - touchEndX > swipeThreshold) {
+    currentDeckIndex = (currentDeckIndex + 1) % totalDecks.length;
+    switchDeck(totalDecks[currentDeckIndex]);
+  } else if (touchEndX - touchStartX > swipeThreshold) {
+    currentDeckIndex = (currentDeckIndex - 1 + totalDecks.length) % totalDecks.length;
+    switchDeck(totalDecks[currentDeckIndex]);
+  }
+}
+
+// Initialize default layout view
+switchDeck('core');
+
+
+// ── COLORS FOR BARS ──
+function barClass(pct) {
+  if (pct < 50) return 'low';
+  if (pct < 80) return 'med';
+  return 'high';
+}
+
+// ── FORMAT HELPERS ──
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return '--%';
+  return parseFloat(v).toFixed(0) + '%';
+}
+
+// ── FETCH & UPDATE ──
+async function fetchData() {
+  try {
+    const resp = await fetch('/dashboard/data');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const d = await resp.json();
+    updateHeader(d);
+    updateServices(d.services || {});
+    updateBattery(d.battery || {});
+    updateWifi(d.wifi || {});
+    updatePC(d.pc_stats || {});
+    updateSysinfo(d.system || {});
+    updateWeather(d.weather || {});
+    updateResources(d.resources || {});
+    updateRSS(d.rss || []);
+  } catch (e) {
+    console.warn('Fetch error:', e.message);
+  }
+}
+
+function updateHeader(d) {
+  document.getElementById('header-uptime').textContent =
+    'UPTIME ' + ((d.system && d.system.uptime) || '--');
+  const allUp = d.services && Object.values(d.services).every(s => s === 'running' || s === 'online');
+  const dot = document.getElementById('global-dot');
+  dot.style.background = allUp ? 'var(--accent)' : 'var(--danger)';
+  dot.style.boxShadow = allUp
+    ? '0 0 6px var(--accent), 0 0 12px var(--accent)'
+    : '0 0 6px var(--danger), 0 0 12px var(--danger)';
+}
+
+function updateServices(svcs) {
+  const order = ['sshd','cloudflared','ntfy','webhook','hermes','battery_alert','ferran_alert','forza','feeder'];
+  const labels = { sshd:'SSH', cloudflared:'CF Tunnel', ntfy:'ntfy',
+    webhook:'Webhook', hermes:'Hermes', battery_alert:'Battery Alert', ferran_alert:'Ferran Alert',
+    forza:'Forza', feeder:'Feeder' };
+  let html = '';
+  for (const key of order) {
+    const status = svcs[key];
+    const up = status === 'running' || status === 'online';
+    html += `<div class="svc-row">
+      <span class="svc-dot ${up ? 'up' : 'down'}"></span>
+      <span class="svc-name ${up ? '' : 'down-svc'}">${labels[key] || key}</span>
+    </div>`;
+  }
+  document.getElementById('services-grid').innerHTML = html;
+}
+
+function updateBattery(b) {
+  document.getElementById('bat-level').textContent = b.level != null ? b.level + '%' : '--';
+  document.getElementById('bat-status').textContent = b.status || '--';
+  document.getElementById('bat-health').textContent = b.health || '--';
+  document.getElementById('bat-temp').textContent = b.temperature != null ? b.temperature + '°C' : '--';
+  const lvl = parseInt(b.level) || 0;
+  document.getElementById('bat-fill').style.width = lvl + '%';
+  const lvlEl = document.getElementById('bat-level');
+  if (lvl <= 15) lvlEl.className = 'data-val danger';
+  else if (lvl <= 25) lvlEl.className = 'data-val warn';
+  else lvlEl.className = 'data-val';
+}
+
+function updateWifi(w) {
+  document.getElementById('wifi-ssid').textContent = w.ssid || '--';
+  document.getElementById('wifi-ip').textContent = w.ip || '--';
+  document.getElementById('wifi-rssi').textContent = w.rssi != null ? w.rssi + ' dBm' : '--';
+  document.getElementById('wifi-speed').textContent = w.speed_mbps != null ? w.speed_mbps + ' Mbps' : '--';
+}
+
+function updatePC(pc) {
+  const online = pc && pc.online;
+  document.getElementById('pc-cpu').textContent = online ? (pc.cpu_load + ' @ ' + pc.cpu_temp) : 'OFFLINE';
+  document.getElementById('pc-gpu').textContent = online ? (pc.gpu_load + ' @ ' + pc.gpu_temp) : 'OFFLINE';
+  document.getElementById('pc-ram').textContent = online ? pc.ram_load : 'OFFLINE';
+  document.getElementById('pc-fan').textContent = online ? pc.cpu_fan : 'OFFLINE';
+  ['pc-cpu','pc-gpu','pc-ram','pc-fan'].forEach(id => {
+    document.getElementById(id).className = online ? 'data-val' : 'data-val offline';
+  });
+}
+
+function updateSysinfo(s) {
+  document.getElementById('sys-uptime').textContent = s.uptime || '--';
+  document.getElementById('sys-disk').textContent = s.disk || '--';
+  document.getElementById('sys-mem').textContent = s.memory || '--';
+}
+
+function updateWeather(w) {
+  document.getElementById('wx-temp').textContent = w.temp != null ? w.temp + '°C' : '--°';
+  document.getElementById('wx-desc').textContent = w.description || '--';
+  document.getElementById('wx-hum').textContent = w.humidity != null ? w.humidity + '%' : '--';
+  document.getElementById('wx-feels').textContent = w.feels_like != null ? w.feels_like + '°C' : '--';
+}
+
+function updateResources(r) {
+  const cpuPct = parseFloat(r.cpu) || 0;
+  const memPct = parseFloat(r.mem_pct) || 0;
+  const diskPct = parseFloat(r.disk_pct) || 0;
+
+  document.getElementById('res-cpu-pct').textContent = fmtPct(cpuPct);
+  document.getElementById('res-mem-pct').textContent = fmtPct(memPct);
+  document.getElementById('res-disk-pct').textContent = fmtPct(diskPct);
+
+  const cpuBar = document.getElementById('res-cpu-bar');
+  const memBar = document.getElementById('res-mem-bar');
+  const diskBar = document.getElementById('res-disk-bar');
+
+  cpuBar.style.width = cpuPct + '%';
+  memBar.style.width = memPct + '%';
+  diskBar.style.width = diskPct + '%';
+
+  cpuBar.className = 'bar-fill ' + barClass(cpuPct);
+  memBar.className = 'bar-fill ' + barClass(memPct);
+  diskBar.className = 'bar-fill ' + barClass(diskPct);
+}
+
+function updateRSS(items) {
+  if (!items || items.length === 0) {
+    document.getElementById('rss-list').innerHTML = '<li><span style="color:var(--dim)">No feed data</span></li>';
+    return;
+  }
+  document.getElementById('rss-list').innerHTML = items.slice(0, 10).map(item =>
+    `<li><span class="rss-date">${item.published || ''}</span><a href="${item.link || '#'}" target="_blank">${item.title || 'Untitled'}</a></li>`
+  ).join('');
+}
+
+// ── UPDATE FORZA MINIMAL TELEMETRY STATE ──
+// ── FORZA REAL-TIME TELEMETRY STREAM ENGINE ──
+let forzaWS = null;
+let lastForzaPacketTime = 0;
+let forzaTimeoutCheck = null;
+
+function initForzaWebSocket() {
+  // Connect directly to the local python listener server running on port 8000
+  // Note: Replace 'localhost' with your cyberdeck's actual IP if viewing on another device
+  const targetHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'localhost:8000' 
+    : window.location.hostname + ':8000';
+
+  forzaWS = new WebSocket(`ws://${targetHost}/ws`);
+
+  forzaWS.onopen = () => {
+    console.log("[Forza WS] Connected to telemetry backend loop.");
+  };
+
+  forzaWS.onmessage = (event) => {
+    try {
+      const telemetry = JSON.parse(event.data);
+      lastForzaPacketTime = Date.now();
+      
+      const statusEl = document.getElementById('forza-status');
+      const rpmEl    = document.getElementById('forza-rpm');
+      const speedEl  = document.getElementById('forza-speed');
+      const gearEl   = document.getElementById('forza-gear');
+
+      statusEl.textContent = 'ACTIVE';
+      statusEl.className   = 'data-val telemetry';
+
+      // ── CLEAN ROUNDING LOGIC ──
+      // Round to the nearest 100 RPM to stop hyperactive digit flicker
+      if (telemetry.rpm) {
+        const roundedRPM = Math.round(telemetry.rpm / 100) * 100;
+        rpmEl.textContent = roundedRPM + ' RPM';
+      } else {
+        rpmEl.textContent = '0 RPM';
+      }
+
+      // Drop the decimal entirely for a clean integer speed layout
+      if (telemetry.speed_kmh) {
+        const roundedSpeed = Math.round(telemetry.speed_kmh);
+        speedEl.textContent = roundedSpeed + ' KM/H';
+      } else {
+        speedEl.textContent = '0 KM/H';
+      }
+      
+      // Format gear assignments cleanly
+      let gearDisplay = telemetry.gear;
+      if (gearDisplay === 0) gearDisplay = 'R';
+      else if (gearDisplay === 11) gearDisplay = 'N'; 
+      gearEl.textContent = gearDisplay;
+
+      [rpmEl, speedEl, gearEl].forEach(el => el.className = 'data-val telemetry');
+    } catch (err) {
+      console.error("[Forza WS] Malformed data payload received", err);
+    }
+  };
+
+  forzaWS.onclose = () => {
+    setForzaOffline();
+    // Attempt re-handshake every 5 seconds if connection drops out entirely
+    setTimeout(initForzaWebSocket, 5000);
+  };
+
+  forzaWS.onerror = () => {
+    forzaWS.close();
+  };
+}
+
+function setForzaOffline() {
+  const statusEl = document.getElementById('forza-status');
+  const rpmEl    = document.getElementById('forza-rpm');
+  const speedEl  = document.getElementById('forza-speed');
+  const gearEl   = document.getElementById('forza-gear');
+
+  statusEl.textContent = 'OFFLINE';
+  statusEl.className   = 'data-val offline';
+
+  [rpmEl, speedEl, gearEl].forEach(el => {
+    el.textContent = 'OFFLINE';
+    el.className = 'data-val offline';
+  });
+}
+
+// Watchdog monitor ensuring fields go OFFLINE if game is paused/stopped but socket is alive
+function startForzaWatchdog() {
+  forzaTimeoutCheck = setInterval(() => {
+    // If no UDP packet packet has passed down the pipeline for over 2 seconds, flag it offline
+    if (Date.now() - lastForzaPacketTime > 2000) {
+      setForzaOffline();
+    }
+  }, 1000);
+}
+
+// Fire up listeners on interface execution
+initForzaWebSocket();
+startForzaWatchdog();
+
+// ── POLLING ──
+fetchData();
+setInterval(fetchData, 4000);
+</script>
+
+</body>
+</html>

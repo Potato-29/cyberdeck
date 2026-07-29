@@ -4,13 +4,15 @@ Cyberdeck Webhook Server v2.0
 Handles service restarts, status checks, ESP32 cat feeder, and telemetry.
 """
 
+import json
 import os
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 
 app = Flask(__name__)
 
@@ -131,6 +133,191 @@ def call_esp32(endpoint, retries=3):
             if attempt < retries - 1:
                 time.sleep(2)
     raise last_err
+
+
+# ── Dashboard Helpers ──────────────────────────────────────
+
+def _run(cmd, timeout=5):
+    """Run a shell command, return stripped stdout or None on failure."""
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        return r.stdout.strip() if r.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def get_battery_info():
+    """Return battery dict from termux-battery-status."""
+    try:
+        raw = subprocess.run(
+            ["termux-battery-status"], capture_output=True, text=True, timeout=5
+        )
+        b = json.loads(raw.stdout)
+        return {
+            "level": b.get("percentage"),
+            "status": b.get("status"),
+            "health": b.get("health"),
+            "temperature": b.get("temperature"),
+        }
+    except Exception:
+        return {}
+
+
+def get_wifi_info():
+    """Return wifi dict from termux-wifi-connectioninfo."""
+    try:
+        raw = subprocess.run(
+            ["termux-wifi-connectioninfo"], capture_output=True, text=True, timeout=5
+        )
+        w = json.loads(raw.stdout)
+        return {
+            "ssid": w.get("ssid", "--"),
+            "ip": w.get("ip", "--"),
+            "rssi": w.get("rssi"),
+            "speed_mbps": w.get("link_speed_mbps"),
+        }
+    except Exception:
+        return {}
+
+
+def get_uptime_str():
+    """Return human-readable uptime string."""
+    try:
+        with open("/proc/uptime") as f:
+            secs = int(float(f.readline().split()[0]))
+        d, h = divmod(secs, 86400)
+        h, m = divmod(h, 3600)
+        parts = []
+        if d: parts.append(f"{d}d")
+        if h: parts.append(f"{h}h")
+        parts.append(f"{m}m")
+        return " ".join(parts)
+    except Exception:
+        return "--"
+
+
+def get_disk_str():
+    """Return disk usage string for /sdcard."""
+    out = _run("df -h /sdcard 2>/dev/null | awk 'NR==2{print $3\"/\"$2\" (\"$5\" used)\"}'")
+    return out or "--"
+
+
+def get_disk_pct():
+    """Return disk percentage as float for /sdcard."""
+    out = _run("df /sdcard 2>/dev/null | awk 'NR==2{print $5}' | tr -d '%'")
+    try:
+        return float(out) if out else 0.0
+    except Exception:
+        return 0.0
+
+
+def get_memory_str():
+    """Return memory usage string."""
+    out = _run("free -h | awk '/^Mem/{print $3\"/\"$2\" used\"}'")
+    return out or "--"
+
+
+def get_memory_pct():
+    """Return memory percentage as float."""
+    out = _run("free | awk '/^Mem/{printf \"%.1f\", $3/$2*100}'")
+    try:
+        return float(out) if out else 0.0
+    except Exception:
+        return 0.0
+
+
+def get_cpu_pct():
+    """Return rough CPU usage via /proc/stat."""
+    try:
+        with open("/proc/stat") as f:
+            fields = f.readline().split()
+        total = sum(int(x) for x in fields[1:])
+        idle = int(fields[4])
+        return round((1 - idle / total) * 100, 1) if total else 0
+    except Exception:
+        return 0
+
+
+def get_pc_stats():
+    """Fetch PC telemetry from LibreHardwareMonitor."""
+    try:
+        resp = requests.get("http://192.168.1.9:8085/data.json", timeout=2)
+        data = resp.json()
+        def find(sensor_id):
+            return _find_sensor(data, sensor_id)
+        return {
+            "online": True,
+            "cpu_temp": f"{find('/amdcpu/0/temperature/2') or '--'}°C",
+            "cpu_load": f"{find('/amdcpu/0/load/0') or '--'}%",
+            "gpu_temp": f"{find('/gpu-nvidia/0/temperature/0') or '--'}°C",
+            "gpu_load": f"{find('/gpu-nvidia/0/load/0') or '--'}%",
+            "ram_load": f"{find('/ram/load/0') or '--'}%",
+            "cpu_fan": f"{find('/lpc/it8686e/0/fan/0') or '--'} RPM",
+        }
+    except Exception:
+        return {"online": False}
+
+
+def _find_sensor(data, sensor_id):
+    """Recursively search LibreHardwareMonitor JSON tree."""
+    if isinstance(data, dict):
+        if data.get("SensorId") == sensor_id:
+            return data.get("Value")
+        for key in ("Children", "Sensors"):
+            if key in data:
+                v = _find_sensor(data[key], sensor_id)
+                if v is not None:
+                    return v
+    elif isinstance(data, list):
+        for item in data:
+            v = _find_sensor(item, sensor_id)
+            if v is not None:
+                return v
+    return None
+
+
+def get_rss_feed():
+    """Parse TechCrunch RSS and return list of {title, link, published}."""
+    try:
+        resp = requests.get("https://techcrunch.com/feed/", timeout=8)
+        root = ET.fromstring(resp.text)
+        items = []
+        for item in root.iter("item"):
+            title_el = item.find("title")
+            link_el = item.find("link")
+            pub_el = item.find("pubDate")
+            if title_el is not None:
+                pub_text = pub_el.text if pub_el is not None else ""
+                # shorten date
+                if pub_text:
+                    parts = pub_text.split()
+                    if len(parts) >= 4:
+                        pub_text = f"{parts[1]} {parts[2]} {parts[3]}"
+                items.append({
+                    "title": title_el.text,
+                    "link": link_el.text if link_el is not None else "#",
+                    "published": pub_text,
+                })
+        return items[:10]
+    except Exception:
+        return []
+
+
+def get_weather():
+    """Fetch Ahmedabad weather from OpenWeatherMap."""
+    try:
+        url = ("https://api.openweathermap.org/data/2.5/weather"
+               "?id=1279233&appid=7262217ccc9a6e74f854163184d21298&units=metric")
+        resp = requests.get(url, timeout=5)
+        d = resp.json()
+        return {
+            "temp": round(d["main"]["temp"]),
+            "feels_like": round(d["main"]["feels_like"]),
+            "humidity": d["main"]["humidity"],
+            "description": d["weather"][0]["description"].title(),
+        }
+    except Exception:
+        return {}
 
 
 # ── Routes ────────────────────────────────────────────────
@@ -379,6 +566,55 @@ def execute_command():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "online", "service": "cyberdeck-webhook"}), 200
+
+
+@app.route("/dashboard/data", methods=["GET"])
+def dashboard_data():
+    """Aggregate all dashboard widgets into one JSON response."""
+    # Services
+    services = {}
+    services["sshd"] = "running" if _run("pgrep -x sshd") else "down"
+    services["cloudflared"] = "running" if _run(
+        "ls /proc/*/exe 2>/dev/null | xargs -I{} readlink {} 2>/dev/null | grep -q cloudflared"
+    ) is not None else "down"
+    # services["picoclaw"] = "running" if _run("tmux has-session -t picoclaw 2>/dev/null") is not None else "down"
+    services["ntfy"] = "running" if _run("pgrep -f '[n]tfy serve'") else "down"
+    services["webhook"] = "running" if _run("tmux has-session -t webhook 2>/dev/null") is not None else "down"
+    services["hermes"] = "running" if _run("tmux has-session -t hermes 2>/dev/null") is not None else "down"
+    services["battery_alert"] = "running" if _run("tmux has-session -t battery 2>/dev/null") is not None else "down"
+    services["ferran_alert"] = "running" if _run("tmux has-session -t ferran-alert 2>/dev/null") is not None else "down"
+    services["forza"] = "running" if _run("tmux has-session -t forza 2>/dev/null") is not None else "down"
+    services["feeder"] = "online" if _run(
+        f"curl -sf --max-time 3 'http://{ESP32_IP}/status?token={ESP32_API_TOKEN}'"
+    ) is not None else "offline"
+
+    return jsonify({
+        "services": services,
+        "battery": get_battery_info(),
+        "wifi": get_wifi_info(),
+        "system": {
+            "uptime": get_uptime_str(),
+            "disk": get_disk_str(),
+            "memory": get_memory_str(),
+        },
+        "resources": {
+            "cpu": get_cpu_pct(),
+            "mem_pct": get_memory_pct(),
+            "disk_pct": get_disk_pct(),
+        },
+        "pc_stats": get_pc_stats(),
+        "weather": get_weather(),
+        "rss": get_rss_feed(),
+    }), 200
+
+
+@app.route("/dashboard", methods=["GET"])
+def dashboard_page():
+    """Serve the Fallout-themed dashboard HTML."""
+    html_path = Path(__file__).parent / "dashboard.html"
+    if html_path.exists():
+        return send_file(str(html_path))
+    return jsonify({"error": "dashboard.html not found"}), 404
 
 
 if __name__ == "__main__":
