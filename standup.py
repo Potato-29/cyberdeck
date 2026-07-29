@@ -225,14 +225,31 @@ def format_entries(entries):
     return "\n".join(lines).strip()
 
 
+def _bulletize(text):
+    """Normalize a section's answer into one '- ' bullet per line.
+
+    Handles plain sentences, text the model already bulleted (possibly with a
+    different marker), and empty answers alike, so every section renders the
+    same way regardless of where its text came from.
+    """
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return "- —"
+    out = []
+    for ln in lines:
+        for marker in ("- ", "* ", "• "):
+            if ln.startswith(marker):
+                ln = ln[len(marker):].strip()
+                break
+        out.append(f"- {ln}")
+    return "\n".join(out)
+
+
 def render(sections):
     """Assemble the final Slack-ready message from the five answers."""
     out = []
     for idx, (key, label, _) in enumerate(SECTIONS, start=1):
-        body = (sections.get(key) or "").strip() or "—"
-        # A multi-line answer starts under its heading; a one-liner sits beside it.
-        separator = "\n" if "\n" in body else " "
-        out.append(f"{idx}. {label}:{separator}{body}")
+        out.append(f"{idx}. {label}:\n{_bulletize(sections.get(key))}")
     return "\n\n".join(out)
 
 
@@ -241,13 +258,7 @@ def generate_fallback(entries):
     buckets = {key: [] for key, _, _ in SECTIONS}
     for entry in entries:
         buckets[TAGS.get(entry["tag"], "progress")].append(entry["text"])
-    sections = {}
-    for key, _, _ in SECTIONS:
-        items = buckets[key]
-        if len(items) == 1:
-            sections[key] = items[0]
-        else:
-            sections[key] = "\n".join(f"- {i}" for i in items)
+    sections = {key: "\n".join(items) for key, items in buckets.items()}
     return render(sections)
 
 
@@ -286,18 +297,20 @@ Turn them into my weekly update for the team Slack thread. The five questions ar
 {questions}
 
 Rules:
-- Write in first person, the way I'd type it into Slack. Plain sentences, no
-  corporate filler, no emoji, no markdown headers or bold.
-- Ground every answer in the notes above. Do not invent work I didn't log.
-- Each answer is 1-3 sentences, or a few short lines if I logged several things.
+- Write in first person, the way I'd type it into Slack. Plain language, no
+  corporate filler, no emoji, no bold.
+- Format every answer as bullet points, not paragraphs: one line per point, each
+  starting with "- ". One item logged means one bullet; several related items can
+  be one bullet each or combined into one if they're genuinely the same thing.
+- Ground every bullet in the notes above. Do not invent work I didn't log.
 - The [tag] on each note says which section I meant it for, but use your judgement
   if a note clearly fits somewhere else too.
 - {values_note}
-- If a section has nothing to draw on, say so briefly and honestly rather than
-  padding it out.
+- If a section has nothing to draw on, say so in a single honest bullet rather
+  than padding it out.
 
 Reply with a JSON object and nothing else. It must have exactly these five string
-keys, each holding the answer to the matching question:
+keys, each holding that question's answer as newline-separated "- " bullet points:
 {", ".join(key for key, _, _ in SECTIONS)}"""
 
     try:
