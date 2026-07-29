@@ -54,6 +54,8 @@ NTFY_PASS = require_env("NTFY_PASS")
 RESTART_URL = require_env("RESTART_URL").rstrip("/")
 PC_IP = require_env("PC_IP")
 PC_TELEMETRY_PORT = os.environ.get("PC_TELEMETRY_PORT", "8085")
+PC_AGENT_PORT = os.environ.get("PC_AGENT_PORT", "8086")
+PC_AGENT_TOKEN = require_env("PC_AGENT_TOKEN")
 
 # ── Services ──────────────────────────────────────────────
 SERVICES = {
@@ -253,15 +255,27 @@ def get_pc_stats():
             return _find_sensor(data, sensor_id)
         return {
             "online": True,
-            "cpu_temp": f"{find('/amdcpu/0/temperature/2') or '--'}°C",
-            "cpu_load": f"{find('/amdcpu/0/load/0') or '--'}%",
-            "gpu_temp": f"{find('/gpu-nvidia/0/temperature/0') or '--'}°C",
-            "gpu_load": f"{find('/gpu-nvidia/0/load/0') or '--'}%",
-            "ram_load": f"{find('/ram/load/0') or '--'}%",
-            "cpu_fan": f"{find('/lpc/it8686e/0/fan/0') or '--'} RPM",
+            "cpu_temp": find("/amdcpu/0/temperature/2") or "--",
+            "cpu_load": find("/amdcpu/0/load/0") or "--",
+            "gpu_temp": find("/gpu-nvidia/0/temperature/0") or "--",
+            "gpu_load": find("/gpu-nvidia/0/load/0") or "--",
+            "ram_load": find("/ram/load/0") or "--",
+            "cpu_fan": find("/lpc/it8686e/0/fan/0") or "--",
         }
     except Exception:
         return {"online": False}
+
+
+def call_pc_agent(endpoint, params=None, timeout=6):
+    """Call the PC deck agent over the LAN. Raises on transport failure."""
+    query = {"token": PC_AGENT_TOKEN}
+    if params:
+        query.update(params)
+    return requests.get(
+        f"http://{PC_IP}:{PC_AGENT_PORT}/{endpoint}",
+        params=query,
+        timeout=timeout,
+    )
 
 
 def _find_sensor(data, sensor_id):
@@ -574,9 +588,64 @@ def health():
     return jsonify({"status": "online", "service": "cyberdeck-webhook"}), 200
 
 
+@app.route("/deck/apps", methods=["GET"])
+def deck_apps():
+    """List launchable PC apps with their live running state."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        resp = call_pc_agent("apps")
+        resp.raise_for_status()
+        return jsonify(resp.json()), 200
+    except Exception:
+        # PC asleep or agent not running — the panel greys out rather than hangs
+        return jsonify({"online": False, "apps": []}), 200
+
+
+@app.route("/deck/launch", methods=["GET", "POST"])
+def deck_launch():
+    """Launch a whitelisted app on the PC."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    target = request.args.get("app")
+    if not target:
+        return jsonify({"error": "Missing 'app' parameter"}), 400
+
+    try:
+        resp = call_pc_agent("launch", {"app": target}, timeout=20)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {"status": "error", "message": f"PC agent unreachable: {e}"}
+        ), 503
+
+
+@app.route("/deck/close", methods=["GET", "POST"])
+def deck_close():
+    """Close a whitelisted app on the PC."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    target = request.args.get("app")
+    if not target:
+        return jsonify({"error": "Missing 'app' parameter"}), 400
+
+    try:
+        resp = call_pc_agent("close", {"app": target}, timeout=20)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {"status": "error", "message": f"PC agent unreachable: {e}"}
+        ), 503
+
+
 @app.route("/dashboard/data", methods=["GET"])
 def dashboard_data():
     """Aggregate all dashboard widgets into one JSON response."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
     # Services
     services = {}
     services["sshd"] = "running" if _run("pgrep -x sshd") else "down"
@@ -617,6 +686,8 @@ def dashboard_data():
 @app.route("/dashboard", methods=["GET"])
 def dashboard_page():
     """Serve the Fallout-themed dashboard HTML."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
     html_path = Path(__file__).parent / "dashboard.html"
     if html_path.exists():
         return send_file(str(html_path))

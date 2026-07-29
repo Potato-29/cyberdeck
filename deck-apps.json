@@ -1,0 +1,39 @@
+{
+  "chrome": {
+    "label": "Chrome",
+    "icon": "🌐",
+    "target": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "proc": "chrome.exe"
+  },
+  "spotify": {
+    "label": "Spotify",
+    "icon": "🎵",
+    "target": "spotify:",
+    "proc": "Spotify.exe"
+  },
+  "discord": {
+    "label": "Discord",
+    "icon": "💬",
+    "target": "%LOCALAPPDATA%/Discord/Update.exe",
+    "args": ["--processStart", "Discord.exe"],
+    "proc": "Discord.exe"
+  },
+  "steam": {
+    "label": "Steam",
+    "icon": "🎮",
+    "target": "steam://open/games",
+    "proc": "steam.exe"
+  },
+  "forza": {
+    "label": "Forza Horizon 5",
+    "icon": "🏎",
+    "target": "steam://rungameid/1551360",
+    "proc": "ForzaHorizon5.exe"
+  },
+  "terminal": {
+    "label": "Terminal",
+    "icon": "▮",
+    "target": "%LOCALAPPDATA%/Microsoft/WindowsApps/wt.exe",
+    "proc": "WindowsTerminal.exe"
+  }
+}

@@ -249,6 +249,92 @@
     background: rgba(0, 204, 255, 0.02);
   }
 
+  /* ── LAUNCH DECK TILES ── */
+  .deck-status {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    margin-bottom: 10px;
+    min-height: 12px;
+  }
+  .deck-status.ok      { color: var(--accent); }
+  .deck-status.offline { color: var(--danger); }
+
+  #deck-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .deck-tile {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .deck-tile:hover {
+    border-color: var(--accent);
+    background: rgba(21,255,0,0.04);
+    box-shadow: 0 0 10px rgba(21,255,0,0.12), inset 0 0 14px rgba(21,255,0,0.04);
+  }
+  .deck-tile:active { transform: translateY(1px); }
+  .deck-tile.running { border-color: var(--accent-dim); }
+  .deck-tile.busy    { opacity: 0.55; pointer-events: none; }
+  .deck-tile.failed  { border-color: var(--danger); }
+
+  .deck-icon {
+    font-size: 24px;
+    line-height: 1;
+    display: block;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 0 6px rgba(21,255,0,0.35));
+  }
+  .deck-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .deck-state {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    margin-top: 4px;
+    display: block;
+    min-height: 11px;
+  }
+  .deck-state.on     { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
+  .deck-state.err    { color: var(--danger); }
+  .deck-state.launch { color: var(--warn); }
+
+  /* Running indicator dot, top-right of tile */
+  .deck-tile.running::after {
+    content: '';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* Close affordance appears only while running */
+  .deck-close {
+    position: absolute;
+    top: 4px; left: 6px;
+    font-size: 11px;
+    color: var(--dim);
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  .deck-tile.running:hover .deck-close { opacity: 1; }
+  .deck-close:hover { color: var(--danger); }
+
   /* ── DATA ITEMS ── */
   .data-row {
     display: flex;
@@ -409,8 +495,8 @@
     }
     
     /* Services, Resources, and RSS always fit full width on mobile screens */
-    #services-panel, #resources-panel, #rss-panel, #forza-panel { 
-      grid-column: 1 / -1 !important; 
+    #services-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
+      grid-column: 1 / -1 !important;
     }
     
     /* Force explicitly paired panels into side-by-side positioning when visible */
@@ -436,6 +522,7 @@
     #resources-panel  { grid-column: 1 / 3; }
     #rss-panel        { grid-column: 3; }
     #forza-panel      { grid-column: 1 / -1; }
+    #deck-panel       { grid-column: 1 / -1; }
   }
 </style>
 </head>
@@ -456,6 +543,7 @@
   <div class="deck-btn active" onclick="switchDeck('core')">[CORE]</div>
   <div class="deck-btn" onclick="switchDeck('sys')">[VITAL]</div>
   <div class="deck-btn" onclick="switchDeck('env')">[PERIPH]</div>
+  <div class="deck-btn" onclick="switchDeck('deck')">[DECK]</div>
 </div>
 
 <div id="app">
@@ -491,11 +579,11 @@
 
   <div class="panel" id="pc-panel" data-title="[ PC VITALS ]" data-deck="sys">
     <div class="data-row"><span class="data-label">CPU</span>
-      <span class="data-val" id="pc-cpu">--</span></div>
+      <span><span class="data-val" id="pc-cpu-load">--</span> @ <span class="data-val" id="pc-cpu-temp">--</span></span></div>
     <div class="data-row"><span class="data-label">GPU</span>
-      <span class="data-val" id="pc-gpu">--</span></div>
+      <span><span class="data-val" id="pc-gpu-load">--</span> @ <span class="data-val" id="pc-gpu-temp">--</span></span></div>
     <div class="data-row"><span class="data-label">RAM</span>
-      <span class="data-val" id="pc-ram">--</span></div>
+      <span class="data-val" id="pc-ram-load">--</span></div>
     <div class="data-row"><span class="data-label">FAN</span>
       <span class="data-val" id="pc-fan">--</span></div>
   </div>
@@ -556,6 +644,12 @@
     </ul>
   </div>
 
+  <!-- PC APP LAUNCHER (Deck View) -->
+  <div class="panel" id="deck-panel" data-title="[ LAUNCH DECK ]" data-deck="deck">
+    <div class="deck-status" id="deck-status">SCANNING PC LINK...</div>
+    <div id="deck-grid"></div>
+  </div>
+
 </div>
 
 <script>
@@ -594,7 +688,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ── ROTARY TACTICAL DECK MANAGEMENT ──
-const totalDecks = ['core', 'sys', 'env'];
+const totalDecks = ['core', 'sys', 'env', 'deck'];
 let currentDeckIndex = 0;
 
 function switchDeck(deckName) {
@@ -651,16 +745,37 @@ function barClass(pct) {
   return 'high';
 }
 
+// ── COLORS FOR PC VITALS (usage % / temp °C thresholds) ──
+function pcClass(rawVal, warnAt, dangerAt) {
+  const n = parseFloat(rawVal);
+  if (isNaN(n)) return 'data-val';
+  if (n >= dangerAt) return 'data-val danger';
+  if (n >= warnAt) return 'data-val warn';
+  return 'data-val';
+}
+
 // ── FORMAT HELPERS ──
 function fmtPct(v) {
   if (v == null || isNaN(v)) return '--%';
   return parseFloat(v).toFixed(0) + '%';
 }
 
+// ── AUTH ──
+// The page itself is served behind ?token=, so reuse that token for every
+// subsequent API call rather than embedding a secret in the markup.
+const AUTH_TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+function apiUrl(path, params = {}) {
+  const u = new URL(path, location.origin);
+  u.searchParams.set('token', AUTH_TOKEN);
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  return u.toString();
+}
+
 // ── FETCH & UPDATE ──
 async function fetchData() {
   try {
-    const resp = await fetch('/dashboard/data');
+    const resp = await fetch(apiUrl('/dashboard/data'));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const d = await resp.json();
     updateHeader(d);
@@ -727,13 +842,19 @@ function updateWifi(w) {
 
 function updatePC(pc) {
   const online = pc && pc.online;
-  document.getElementById('pc-cpu').textContent = online ? (pc.cpu_load + ' @ ' + pc.cpu_temp) : 'OFFLINE';
-  document.getElementById('pc-gpu').textContent = online ? (pc.gpu_load + ' @ ' + pc.gpu_temp) : 'OFFLINE';
-  document.getElementById('pc-ram').textContent = online ? pc.ram_load : 'OFFLINE';
-  document.getElementById('pc-fan').textContent = online ? pc.cpu_fan : 'OFFLINE';
-  ['pc-cpu','pc-gpu','pc-ram','pc-fan'].forEach(id => {
-    document.getElementById(id).className = online ? 'data-val' : 'data-val offline';
-  });
+
+  const setVal = (id, val, cls) => {
+    const el = document.getElementById(id);
+    el.textContent = online ? val : 'OFFLINE';
+    el.className = online ? cls : 'data-val offline';
+  };
+
+  setVal('pc-cpu-load', pc.cpu_load, pcClass(pc.cpu_load, 50, 80));
+  setVal('pc-cpu-temp', pc.cpu_temp, pcClass(pc.cpu_temp, 70, 85));
+  setVal('pc-gpu-load', pc.gpu_load, pcClass(pc.gpu_load, 50, 80));
+  setVal('pc-gpu-temp', pc.gpu_temp, pcClass(pc.gpu_temp, 70, 85));
+  setVal('pc-ram-load', pc.ram_load, pcClass(pc.ram_load, 50, 80));
+  setVal('pc-fan', pc.cpu_fan, 'data-val');
 }
 
 function updateSysinfo(s) {
@@ -779,6 +900,109 @@ function updateRSS(items) {
   document.getElementById('rss-list').innerHTML = items.slice(0, 10).map(item =>
     `<li><span class="rss-date">${item.published || ''}</span><a href="${item.link || '#'}" target="_blank">${item.title || 'Untitled'}</a></li>`
   ).join('');
+}
+
+// ── PC LAUNCH DECK ──
+// Tiles are rebuilt only when the app list or running-state actually changes,
+// so a tile mid-launch is never yanked out from under the user's tap.
+let deckSignature = '';
+const deckBusy = new Set();
+
+async function fetchDeck() {
+  const statusEl = document.getElementById('deck-status');
+  try {
+    const resp = await fetch(apiUrl('/deck/apps'));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const d = await resp.json();
+
+    if (!d.online) {
+      statusEl.textContent = 'PC LINK OFFLINE';
+      statusEl.className = 'deck-status offline';
+      document.getElementById('deck-grid').innerHTML =
+        '<span style="color:var(--dim);font-size:11px">Agent unreachable — is the PC awake?</span>';
+      deckSignature = '';
+      return;
+    }
+
+    const apps = d.apps || [];
+    const running = apps.filter(a => a.running).length;
+    statusEl.textContent = `PC LINK ACTIVE — ${apps.length} APPS / ${running} RUNNING`;
+    statusEl.className = 'deck-status ok';
+    renderDeck(apps);
+  } catch (e) {
+    statusEl.textContent = 'PC LINK ERROR';
+    statusEl.className = 'deck-status offline';
+    deckSignature = '';
+  }
+}
+
+function renderDeck(apps) {
+  const sig = apps.map(a => `${a.key}:${a.running}`).join('|');
+  if (sig === deckSignature) return;   // nothing changed, leave the DOM alone
+  deckSignature = sig;
+
+  document.getElementById('deck-grid').innerHTML = apps.map(a => `
+    <div class="deck-tile ${a.running ? 'running' : ''}" data-app="${a.key}"
+         onclick="launchApp('${a.key}')">
+      ${a.running && a.closable
+        ? `<span class="deck-close" title="Close" onclick="closeApp(event,'${a.key}')">[X]</span>`
+        : ''}
+      <span class="deck-icon">${a.icon || '▸'}</span>
+      <span class="deck-label">${a.label || a.key}</span>
+      <span class="deck-state ${a.running ? 'on' : ''}">${a.running ? 'RUNNING' : ''}</span>
+    </div>`).join('');
+}
+
+function deckTile(key) {
+  return document.querySelector(`.deck-tile[data-app="${key}"]`);
+}
+
+function setTileState(key, text, cls) {
+  const tile = deckTile(key);
+  if (!tile) return;
+  const state = tile.querySelector('.deck-state');
+  if (state) {
+    state.textContent = text;
+    state.className = 'deck-state ' + (cls || '');
+  }
+}
+
+async function deckAction(key, endpoint, pendingText, okText, failText) {
+  if (deckBusy.has(key)) return;
+  deckBusy.add(key);
+
+  const tile = deckTile(key);
+  if (tile) tile.classList.add('busy');
+  setTileState(key, pendingText, 'launch');
+
+  try {
+    const resp = await fetch(apiUrl(endpoint, { app: key }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.status === 'error') throw new Error(d.message || d.error || 'failed');
+    setTileState(key, okText, 'on');
+  } catch (e) {
+    setTileState(key, failText, 'err');
+    if (tile) tile.classList.add('failed');
+  } finally {
+    deckBusy.delete(key);
+    if (tile) tile.classList.remove('busy');
+    // Force the next poll to re-render so real running-state replaces the
+    // optimistic label, and clear any failure styling.
+    setTimeout(() => {
+      deckSignature = '';
+      if (tile) tile.classList.remove('failed');
+      fetchDeck();
+    }, 3000);
+  }
+}
+
+function launchApp(key) {
+  deckAction(key, '/deck/launch', 'LAUNCHING...', 'STARTED', 'FAILED');
+}
+
+function closeApp(event, key) {
+  event.stopPropagation();   // don't trigger the tile's launch handler
+  deckAction(key, '/deck/close', 'CLOSING...', 'CLOSED', 'FAILED');
 }
 
 // ── UPDATE FORZA MINIMAL TELEMETRY STATE ──
@@ -885,6 +1109,10 @@ startForzaWatchdog();
 // ── POLLING ──
 fetchData();
 setInterval(fetchData, 4000);
+
+// Deck polls slower — each call shells out to tasklist on the PC
+fetchDeck();
+setInterval(fetchDeck, 8000);
 </script>
 
 </body>

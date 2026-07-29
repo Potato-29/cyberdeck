@@ -13,6 +13,7 @@ The Cyberdeck is a rooted Android phone permanently stationed at your desk. It r
 | Service inventory and descriptions | [Services](services.md) |
 | ntfy alerts, webhooks, tmux model | [Operations flows](operations-flows.md) |
 | Tunnel config and new subdomains | [Cloudflare tunnel](cloudflare-tunnel.md) |
+| PC app launcher tiles | [Deck shortcuts](deck-shortcuts.md) |
 | tmux, ntfy, webhook, Cloudflare CLI | [Commands](commands.md) |
 | Troubleshooting | [Debugging](debugging.md) |
 
@@ -26,6 +27,7 @@ These files mirror what typically lives under `~` on the device. They load secre
 | `status_checker.sh` / `status_checker_new.sh` | Cron health checks → ntfy with restart actions |
 | `battery_alert.sh` | Battery TTS and notifications |
 | `pc-telemetry-monitor.py` | PC LibreHardwareMonitor poll for wtfutil |
+| `pc-deck-agent.py` + `deck-apps.json` | **Runs on the PC** — whitelisted app launcher (port 8086) |
 | `sketch_may1a/` | ESP32 cat feeder firmware |
 
 Copy `.env.example` to `.env` and fill in values before deploying.
