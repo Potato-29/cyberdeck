@@ -59,7 +59,8 @@ def find_sensor(data, sensor_id):
 def run_once():
     url = f"http://{PC_IP}:{PORT}/data.json"
     try:
-        response = requests.get(url, timeout=1)
+        response = requests.get(url, timeout=3)
+        response.raise_for_status()
         data = response.json()
 
         # Extracting Data

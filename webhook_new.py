@@ -52,6 +52,8 @@ NTFY_URL = f"{_ntfy_base}/{_ntfy_topic}"
 NTFY_USER = require_env("NTFY_USER")
 NTFY_PASS = require_env("NTFY_PASS")
 RESTART_URL = require_env("RESTART_URL").rstrip("/")
+PC_IP = require_env("PC_IP")
+PC_TELEMETRY_PORT = os.environ.get("PC_TELEMETRY_PORT", "8085")
 
 # ── Services ──────────────────────────────────────────────
 SERVICES = {
@@ -241,7 +243,11 @@ def get_cpu_pct():
 def get_pc_stats():
     """Fetch PC telemetry from LibreHardwareMonitor."""
     try:
-        resp = requests.get("http://192.168.1.9:8085/data.json", timeout=2)
+        resp = requests.get(
+            f"http://{PC_IP}:{PC_TELEMETRY_PORT}/data.json",
+            timeout=3,
+        )
+        resp.raise_for_status()
         data = resp.json()
         def find(sensor_id):
             return _find_sensor(data, sensor_id)
