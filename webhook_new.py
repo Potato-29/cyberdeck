@@ -57,6 +57,12 @@ PC_TELEMETRY_PORT = os.environ.get("PC_TELEMETRY_PORT", "8085")
 PC_AGENT_PORT = os.environ.get("PC_AGENT_PORT", "8086")
 PC_AGENT_TOKEN = require_env("PC_AGENT_TOKEN")
 
+# Weekly standup logger — imported after .env is loaded, since standup.py
+# reads its config at module level. Serves /standup and /standup/*.
+from standup import bp as standup_bp  # noqa: E402
+
+app.register_blueprint(standup_bp)
+
 # ── Services ──────────────────────────────────────────────
 SERVICES = {
     "sshd": {
