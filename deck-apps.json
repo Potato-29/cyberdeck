@@ -24,11 +24,23 @@
     "target": "steam://open/games",
     "proc": "steam.exe"
   },
-  "forza": {
-    "label": "Forza Horizon 5",
-    "icon": "🏎",
-    "target": "steam://rungameid/1551360",
-    "proc": "ForzaHorizon5.exe"
+  "claude": {
+    "label": "Claude",
+    "icon": "✳️",
+    "target": "%LOCALAPPDATA%/AnthropicClaude/claude.exe",
+    "proc": "claude.exe"
+  },
+  "cursor": {
+    "label": "Cursor",
+    "icon": "🖱",
+    "target": "%LOCALAPPDATA%/Programs/cursor/Cursor.exe",
+    "proc": "Cursor.exe"
+  },
+  "fc26": {
+    "label": "EA Sports FC 26",
+    "icon": "⚽",
+    "target": "steam://rungameid/3405690",
+    "proc": "FC26.exe"
   },
   "terminal": {
     "label": "Terminal",
