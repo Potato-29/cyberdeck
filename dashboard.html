@@ -310,6 +310,48 @@
   .deck-status.ok      { color: var(--accent); }
   .deck-status.offline { color: var(--danger); }
 
+  /* ── AUDIO CONTROLS (mic / speaker mute) ── */
+  .audio-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .audio-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    clip-path: polygon(0 6px, 6px 0, 100% 0, 100% 100%, 0 100%);
+    padding: 8px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--dim);
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .audio-btn:hover { border-color: var(--border-bright); }
+  .audio-btn-icon { display: flex; align-items: center; justify-content: center; }
+  .audio-btn-icon svg { width: 16px; height: 16px; }
+  .audio-btn-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+  }
+  .audio-btn.live {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .audio-btn.live .audio-btn-icon svg { filter: drop-shadow(0 0 4px rgba(31,224,255,0.4)); }
+  .audio-btn.muted {
+    color: var(--warn);
+    border-color: rgba(255,176,0,0.4);
+    background: rgba(255,176,0,0.05);
+  }
+  .audio-btn.busy { opacity: 0.55; pointer-events: none; }
+
   #deck-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -786,6 +828,16 @@
   <!-- PC APP LAUNCHER (Deck View) -->
   <div class="panel" id="deck-panel" data-title="[ LAUNCH DECK ]" data-deck="deck">
     <div class="deck-status" id="deck-status">SCANNING PC LINK...</div>
+    <div class="audio-controls">
+      <button class="audio-btn" id="mic-btn" onclick="toggleAudio('mic')">
+        <span class="audio-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>
+        <span class="audio-btn-label" id="mic-label">MIC --</span>
+      </button>
+      <button class="audio-btn" id="speaker-btn" onclick="toggleAudio('speaker')">
+        <span class="audio-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg></span>
+        <span class="audio-btn-label" id="speaker-label">SPKR --</span>
+      </button>
+    </div>
     <div id="deck-grid"></div>
   </div>
 
@@ -1174,6 +1226,60 @@ function closeApp(event, key) {
   deckAction(key, '/deck/close', 'CLOSING...', 'CLOSED', 'FAILED');
 }
 
+// ── AUDIO CONTROLS (mic / speaker mute) ──
+const audioBusy = new Set();
+
+function applyAudioState(target, muted) {
+  const btn = document.getElementById(target + '-btn');
+  const label = document.getElementById(target + '-label');
+  if (!btn || !label) return;
+  btn.classList.remove('live', 'muted');
+  btn.classList.add(muted ? 'muted' : 'live');
+  label.textContent = (target === 'mic' ? 'MIC ' : 'SPKR ') + (muted ? 'MUTED' : 'LIVE');
+}
+
+function setAudioOffline() {
+  ['mic', 'speaker'].forEach(target => {
+    const btn = document.getElementById(target + '-btn');
+    const label = document.getElementById(target + '-label');
+    if (!btn || !label) return;
+    btn.classList.remove('live', 'muted');
+    label.textContent = (target === 'mic' ? 'MIC' : 'SPKR') + ' --';
+  });
+}
+
+async function fetchAudio() {
+  try {
+    const resp = await fetch(apiUrl('/audio/status'));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const d = await resp.json();
+    if (d.online === false) { setAudioOffline(); return; }
+    applyAudioState('mic', d.mic_muted);
+    applyAudioState('speaker', d.speaker_muted);
+  } catch (e) {
+    setAudioOffline();
+  }
+}
+
+async function toggleAudio(target) {
+  if (audioBusy.has(target)) return;
+  audioBusy.add(target);
+  const btn = document.getElementById(target + '-btn');
+  if (btn) btn.classList.add('busy');
+
+  try {
+    const resp = await fetch(apiUrl('/audio/toggle', { target }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.status === 'error') throw new Error(d.message || 'failed');
+    applyAudioState(target, d.muted);
+  } catch (e) {
+    console.warn('Audio toggle failed:', e.message);
+  } finally {
+    audioBusy.delete(target);
+    if (btn) btn.classList.remove('busy');
+  }
+}
+
 // ── UPDATE FORZA MINIMAL TELEMETRY STATE ──
 // ── FORZA REAL-TIME TELEMETRY STREAM ENGINE ──
 let forzaWS = null;
@@ -1296,6 +1402,10 @@ setInterval(fetchData, 4000);
 // Deck polls slower — each call shells out to tasklist on the PC
 fetchDeck();
 setInterval(fetchDeck, 8000);
+
+// Same cadence as the deck — both round-trip to the PC agent
+fetchAudio();
+setInterval(fetchAudio, 8000);
 
 // Fire up telemetry listeners last
 initForzaWebSocket();

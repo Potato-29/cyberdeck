@@ -11,7 +11,7 @@ IMPORTANT: run this as your logged-in user (Task Scheduler -> "Run only when
 user is logged on", or a Startup-folder shortcut). A Windows *service* runs in
 Session 0 and any GUI app it launches would be invisible.
 
-Install: pip install flask
+Install: pip install flask pycaw comtypes
 Run:     python pc-deck-agent.py
 """
 
@@ -22,7 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import comtypes
 from flask import Flask, jsonify, request
+from pycaw.pycaw import AudioUtilities
 
 app = Flask(__name__)
 
@@ -220,6 +222,54 @@ def close():
         return jsonify({"status": "closed", "app": key}), 200
     except Exception as exc:
         return jsonify({"status": "error", "app": key, "message": str(exc)}), 500
+
+
+
+# ── Audio control ─────────────────────────────────────────
+def _audio_endpoint(kind: str):
+    """Live IAudioEndpointVolume for the current default mic/speaker.
+
+    Re-resolved on every call (not cached) so a device swap — headphones
+    plugged in, a different mic picked as default — is picked up immediately.
+    """
+    try:
+        comtypes.CoInitialize()
+    except OSError:
+        pass  # already initialized on this thread — fine, COM ref-counts it
+    if kind == "speaker":
+        device = AudioUtilities.GetSpeakers()
+    else:
+        device = AudioUtilities.CreateDevice(AudioUtilities.GetMicrophone())
+    return device.EndpointVolume
+
+
+@app.route("/audio/status", methods=["GET"])
+def audio_status():
+    try:
+        return jsonify(
+            {
+                "mic_muted": bool(_audio_endpoint("mic").GetMute()),
+                "speaker_muted": bool(_audio_endpoint("speaker").GetMute()),
+            }
+        ), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/audio/toggle", methods=["GET", "POST"])
+def audio_toggle():
+    target = request.args.get("target")
+    if target not in ("mic", "speaker"):
+        return jsonify({"error": "target must be 'mic' or 'speaker'"}), 400
+    try:
+        vol = _audio_endpoint(target)
+        muted = not bool(vol.GetMute())
+        vol.SetMute(muted, None)
+        return jsonify({"status": "ok", "target": target, "muted": muted}), 200
+    except Exception as exc:
+        return jsonify(
+            {"status": "error", "target": target, "message": str(exc)}
+        ), 500
 
 
 @app.route("/health", methods=["GET"])
