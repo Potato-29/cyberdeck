@@ -287,7 +287,7 @@
 
   #deck-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
   .deck-tile {
@@ -311,12 +311,16 @@
   .deck-tile.failed  { border-color: var(--danger); }
 
   .deck-icon {
-    font-size: 22px;
-    line-height: 1;
-    display: block;
-    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 6px;
     color: var(--accent);
-    filter: drop-shadow(0 0 6px rgba(31,224,255,0.4));
+  }
+  .deck-icon svg {
+    width: 26px;
+    height: 26px;
+    filter: drop-shadow(0 0 4px rgba(31,224,255,0.5));
   }
   .deck-label {
     font-size: 11px;
@@ -597,8 +601,7 @@
     /* 160px leaves dead space under short panels once they're full-width */
     .panel { min-height: unset; padding: 10px; }
 
-    /* Narrower tracks keep three tiles per row down to a 360px screen */
-    #deck-grid     { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    /* Deck grid stays locked to 3 columns; only services relaxes its track width */
     #services-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
   }
 </style>
@@ -979,6 +982,110 @@ function updateRSS(items) {
   ).join('');
 }
 
+// ── CUSTOM PIXEL-ART DECK ICONS ──
+// Hand-authored 10x10 monochrome bitmaps rendered as inline SVG rects (fill:
+// currentColor), so they inherit the tile's cyan glow instead of pulling in
+// full-color emoji that clash with the rest of the HUD. Keyed by app-config
+// key; unknown keys fall back to ICON_GRIDS.default.
+const ICON_GRIDS = {
+  chrome: [        // globe / network ring
+    '...####...',
+    '.##....##.',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '#........#',
+    '.##....##.',
+    '...####...',
+  ],
+  spotify: [        // eighth note
+    '........#.',
+    '........##',
+    '........#.',
+    '........#.',
+    '........#.',
+    '........#.',
+    '........#.',
+    '.####...#.',
+    '#....#..#.',
+    '.####.....',
+  ],
+  discord: [        // comms bubble
+    '.########.',
+    '#........#',
+    '#........#',
+    '#.##..##.#',
+    '#.##..##.#',
+    '#........#',
+    '#........#',
+    '.########.',
+    '...##.....',
+    '..#.......',
+  ],
+  steam: [          // controller
+    '..######..',
+    '.########.',
+    '##########',
+    '#.##..##.#',
+    '#.##..##.#',
+    '##########',
+    '.##....##.',
+    '..#....#..',
+    '..........',
+    '..........',
+  ],
+  forza: [          // side-view race car
+    '..........',
+    '....##....',
+    '...####...',
+    '..######..',
+    '.########.',
+    '##########',
+    '#.#....#.#',
+    '..#....#..',
+    '..........',
+    '..........',
+  ],
+  terminal: [       // >_ prompt
+    '..........',
+    '..........',
+    '..#.......',
+    '...##.....',
+    '.....##...',
+    '.....##...',
+    '...##.....',
+    '..#.......',
+    '..........',
+    '....######',
+  ],
+  default: [        // diamond marker
+    '....##....',
+    '...####...',
+    '..######..',
+    '.########.',
+    '##########',
+    '##########',
+    '.########.',
+    '..######..',
+    '...####...',
+    '....##....',
+  ],
+};
+
+function pixelIconSVG(key) {
+  const rows = ICON_GRIDS[key] || ICON_GRIDS.default;
+  const size = rows.length;
+  let rects = '';
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === '#') rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${size} ${size}" fill="currentColor" shape-rendering="crispEdges">${rects}</svg>`;
+}
+
 // ── PC LAUNCH DECK ──
 // Tiles are rebuilt only when the app list or running-state actually changes,
 // so a tile mid-launch is never yanked out from under the user's tap.
@@ -1024,7 +1131,7 @@ function renderDeck(apps) {
       ${a.running && a.closable
         ? `<span class="deck-close" title="Close" onclick="closeApp(event,'${a.key}')">[X]</span>`
         : ''}
-      <span class="deck-icon">${a.icon || '▸'}</span>
+      <span class="deck-icon">${pixelIconSVG(a.key)}</span>
       <span class="deck-label">${a.label || a.key}</span>
       <span class="deck-state ${a.running ? 'on' : ''}">${a.running ? 'RUNNING' : ''}</span>
     </div>`).join('');
