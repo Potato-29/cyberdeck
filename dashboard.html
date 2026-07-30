@@ -20,7 +20,7 @@
     --danger:   #ff3b4e;
     --blue:     #1fe0ff;
     --header-h: 38px;
-    --deck-h:   34px;
+    --sidebar-w: 58px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -134,30 +134,55 @@
     color: var(--accent);
   }
 
-  /* ── DECK SELECTOR ROW ── */
+  /* ── DECK SELECTOR SIDEBAR ──
+     Fixed left rail below the sticky header. Only ever shown at the narrow
+     widths where sections are viewed one at a time (see the 769px+ block,
+     which hides it entirely once every panel fits on screen at once). */
   #deck-selector {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    z-index: 90;
+    width: var(--sidebar-w);
     display: flex;
-    justify-content: space-around;
+    flex-direction: column;
     background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    height: var(--deck-h);
-    align-items: center;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
   }
   .deck-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 1 0 60px;
     color: var(--dim);
-    font-size: 12px;
+    font-size: 9px;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
+    text-align: center;
     cursor: pointer;
-    padding: 4px 12px;
+    padding: 6px 2px;
     border: 1px solid transparent;
+    border-left: 2px solid transparent;
     transition: all 0.2s ease;
+  }
+  .deck-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deck-btn-icon svg {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 3px rgba(31,224,255,0.3));
   }
   .deck-btn.active {
     color: var(--accent);
-    border-color: var(--border);
-    border-bottom-color: var(--accent);
-    background: rgba(31,224,255,0.06);
+    border-left-color: var(--accent);
+    background: rgba(31,224,255,0.08);
     font-weight: 700;
   }
 
@@ -296,6 +321,7 @@
     clip-path: polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%);
     padding: 14px 8px;
     min-height: 94px;
+    min-width: 0; /* let grid shrink tiles below label min-content so ellipsis kicks in, instead of blowing out the row width */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -552,12 +578,13 @@
       display: none !important;
     }
 
-    #app { 
-      grid-template-columns: 1fr 1fr; 
+    #app {
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       padding: 8px;
+      padding-left: calc(var(--sidebar-w) + 8px);
     }
-    
+
     /* Services, Resources, and RSS always fit full width on mobile screens */
     #services-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
       grid-column: 1 / -1 !important;
@@ -595,7 +622,7 @@
      column, a header that fits, and controls big enough to hit with a thumb.
      Declared last so it overrides the !important rules in the 768px block. */
   @media (max-width: 560px) {
-    :root { --deck-h: 44px; }
+    :root { --sidebar-w: 50px; }
 
     /* Uptime is dropped rather than shrunk — the SYSTEM panel already shows it,
        and reclaiming that width is what lets the rest of the bar fit. */
@@ -605,17 +632,9 @@
     #header .clock-live { font-size: 11px; letter-spacing: 1px; }
     .fullscreen-toggle { font-size: 9px; padding: 4px 6px; }
 
-    /* Equal-width tabs filling the full 44px bar, so the hit area is the button */
-    .deck-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      font-size: 10px;
-      letter-spacing: 1px;
-      padding: 0 2px;
-    }
+    /* Slightly tighter rail so it doesn't eat too much of a narrow screen */
+    .deck-btn { font-size: 8px; letter-spacing: 1px; gap: 4px; }
+    .deck-btn-icon svg { width: 16px; height: 16px; }
 
     /* Single column: at this width two columns leave ~163px of panel content,
        which runs data labels straight into their values. */
@@ -623,6 +642,7 @@
       grid-template-columns: 1fr !important;
       gap: 8px;
       padding: 8px 8px 24px;
+      padding-left: calc(var(--sidebar-w) + 8px);
     }
     #app > .panel { grid-column: 1 / -1 !important; }
     /* 160px leaves dead space under short panels once they're full-width */
@@ -646,12 +666,24 @@
   <span class="fullscreen-toggle" id="fullscreen-btn">[FULLSCREEN]</span>
 </div>
 
-<div id="deck-selector">
-  <div class="deck-btn active" onclick="switchDeck('core')">[CORE]</div>
-  <div class="deck-btn" onclick="switchDeck('sys')">[VITAL]</div>
-  <div class="deck-btn" onclick="switchDeck('env')">[PERIPH]</div>
-  <div class="deck-btn" onclick="switchDeck('deck')">[DECK]</div>
-</div>
+<nav id="deck-selector">
+  <div class="deck-btn active" onclick="switchDeck('core')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-7 4 14 3-10 2 3h5"/></svg></span>
+    <span class="deck-btn-label">CORE</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('sys')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.2"/><line x1="9" y1="2" x2="9" y2="7"/><line x1="15" y1="2" x2="15" y2="7"/><line x1="9" y1="17" x2="9" y2="22"/><line x1="15" y1="17" x2="15" y2="22"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="22" y2="9"/><line x1="17" y1="15" x2="22" y2="15"/></svg></span>
+    <span class="deck-btn-label">VITAL</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('env')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><path d="M5.3 12.3a9 9 0 0 1 13.4 0"/><path d="M2.2 9.2a13.2 13.2 0 0 1 19.6 0"/></svg></span>
+    <span class="deck-btn-label">PERIPH</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('deck')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg></span>
+    <span class="deck-btn-label">DECK</span>
+  </div>
+</nav>
 
 <div id="app">
 
