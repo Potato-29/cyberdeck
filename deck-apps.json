@@ -42,6 +42,13 @@
     "target": "steam://rungameid/3405690",
     "proc": "FC26.exe"
   },
+  "valorant": {
+    "label": "VALORANT",
+    "icon": "🎯",
+    "target": "D:/Games/Riot Games/Riot Client/RiotClientServices.exe",
+    "args": ["--launch-product=valorant", "--launch-patchline=live"],
+    "proc": "VALORANT-Win64-Shipping.exe"
+  },
   "terminal": {
     "label": "Terminal",
     "icon": "▮",
