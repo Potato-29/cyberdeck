@@ -3,21 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PIP-DECK 3000</title>
+<title>ACCESS // DECK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:       #050a06;
-    --surface:  #0a120c;
-    --border:   #1a3a1a;
-    --accent:   #15ff00;
-    --accent-dim:#0a6b00;
-    --text:     #b8ffb8;
-    --dim:      #3a6a3a;
+    --bg:       #060a10;
+    --surface:  #0c131c;
+    --border:   rgba(232,238,244,0.16);
+    --border-bright: #e8eef4;
+    --accent:   #1fe0ff;
+    --accent-dim: rgba(31,224,255,0.35);
+    --text:     #e8eef4;
+    --dim:      #5a6a7c;
     --warn:     #ffb000;
-    --danger:   #ff3333;
-    --blue:     #00ccff;
+    --danger:   #ff3b4e;
+    --blue:     #1fe0ff;
     --header-h: 38px;
     --deck-h:   34px;
   }
@@ -25,15 +26,17 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    background: var(--bg);
+    background:
+      linear-gradient(rgba(31,224,255,0.03) 1px, transparent 1px) 0 0 / 100% 28px,
+      var(--bg);
     color: var(--text);
-    font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+    font-family: 'Chakra Petch', 'Share Tech Mono', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
     user-select: none;
   }
 
-  /* ── CRT SCANLINES ── */
+  /* ── SCANLINES ── */
   body::after {
     content: '';
     position: fixed;
@@ -42,8 +45,8 @@
       0deg,
       transparent,
       transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
+      rgba(0,0,0,0.10) 2px,
+      rgba(0,0,0,0.10) 4px
     );
     pointer-events: none;
     z-index: 9999;
@@ -52,14 +55,14 @@
   .scanline-flicker {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0);
+    background: rgba(31,224,255,0.02);
     pointer-events: none;
     z-index: 9998;
     animation: flicker 8s infinite;
   }
   @keyframes flicker {
     0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% { opacity: 0; }
-    20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.04; }
+    20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.05; }
   }
 
   /* ── HEADER ── */
@@ -69,25 +72,25 @@
     z-index: 100;
     height: var(--header-h);
     background: var(--surface);
-    border-bottom: 2px solid var(--accent-dim);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     padding: 0 16px;
     gap: 20px;
-    box-shadow: 0 2px 16px rgba(21,255,0,0.08);
+    box-shadow: 0 1px 0 var(--accent-dim);
   }
   #header .logo {
     font-size: 15px;
+    font-weight: 600;
     letter-spacing: 4px;
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent), 0 0 30px var(--accent-dim);
+    color: var(--text);
     text-transform: uppercase;
     display: flex;
     align-items: center;
     gap: 8px;
   }
   .blink-cursor::after {
-    content: '█';
+    content: '_';
     animation: blink 1s infinite;
     color: var(--accent);
     text-shadow: 0 0 8px var(--accent);
@@ -98,36 +101,40 @@
   }
   #header .status-dot {
     width: 8px; height: 8px;
-    border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent-dim);
   }
   #header .clock-live {
     margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 13px;
     color: var(--accent);
     letter-spacing: 2px;
   }
   .header-sep {
-    color: var(--dim);
+    color: var(--border);
     margin: 0 4px;
   }
   #header .uptime {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 11px;
     color: var(--dim);
   }
   .fullscreen-toggle {
     font-size: 11px;
-    color: var(--accent);
+    color: var(--text);
     cursor: pointer;
     letter-spacing: 1px;
     padding: 4px 8px;
+    border: 1px solid var(--border);
   }
   .fullscreen-toggle:hover {
-    background: rgba(21, 255, 0, 0.1);
+    background: rgba(31, 224, 255, 0.08);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
-  /* ── COOL DECK SELECTOR ROW ── */
+  /* ── DECK SELECTOR ROW ── */
   #deck-selector {
     display: flex;
     justify-content: space-around;
@@ -135,11 +142,11 @@
     border-bottom: 1px solid var(--border);
     height: var(--deck-h);
     align-items: center;
-    box-shadow: inset 0 -5px 10px rgba(0,0,0,0.5);
   }
   .deck-btn {
     color: var(--dim);
     font-size: 12px;
+    font-weight: 600;
     letter-spacing: 2px;
     cursor: pointer;
     padding: 4px 12px;
@@ -148,10 +155,10 @@
   }
   .deck-btn.active {
     color: var(--accent);
-    border-color: var(--border) var(--border) var(--bg) var(--border);
-    background: var(--bg);
-    text-shadow: 0 0 6px var(--accent);
-    font-weight: bold;
+    border-color: var(--border);
+    border-bottom-color: var(--accent);
+    background: rgba(31,224,255,0.06);
+    font-weight: 700;
   }
 
   /* ── MAIN GRID ── */
@@ -169,26 +176,43 @@
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 12px;
+    clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+    padding: 14px;
     position: relative;
     overflow: hidden;
     min-height: 160px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
+  /* corner cut accents, drawn over the clip so they read as sharp cyan ticks */
+  .panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 14px; height: 14px;
+    border-top: 1px solid var(--accent);
+    border-left: 1px solid var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .panel:hover::after { opacity: 0.9; }
   .panel::before {
     content: attr(data-title);
     display: block;
     font-size: 10px;
+    font-weight: 600;
     letter-spacing: 3px;
-    color: var(--accent-dim);
+    color: var(--dim);
     text-transform: uppercase;
     margin-bottom: 10px;
     padding-bottom: 8px;
+    padding-left: 10px;
     border-bottom: 1px solid var(--border);
-    text-shadow: 0 0 4px var(--accent-dim);
+    border-left: 2px solid var(--accent);
   }
   .panel:hover {
-    border-color: var(--accent);
-    box-shadow: inset 0 0 20px rgba(21,255,0,0.03), 0 0 8px rgba(21,255,0,0.06);
+    border-color: var(--border-bright);
+    box-shadow: 0 0 0 1px rgba(31,224,255,0.15), 0 0 20px rgba(31,224,255,0.08);
   }
 
   /* Services panel - spans full grid */
@@ -236,17 +260,18 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   #forza-panel:hover {
-    border-color: var(--blue);
-    box-shadow: inset 0 0 20px rgba(0,204,255,0.05), 0 0 10px rgba(0,204,255,0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(31,224,255,0.2), 0 0 14px rgba(31,224,255,0.18);
   }
   .forza-link-btn {
     margin-top: 10px;
     text-align: center;
     font-size: 11px;
-    color: var(--blue);
-    border: 1px dashed rgba(0, 204, 255, 0.3);
+    letter-spacing: 1px;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
     padding: 6px;
-    background: rgba(0, 204, 255, 0.02);
+    background: rgba(31, 224, 255, 0.04);
   }
 
   /* ── LAUNCH DECK TILES ── */
@@ -268,6 +293,7 @@
   .deck-tile {
     background: var(--bg);
     border: 1px solid var(--border);
+    clip-path: polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%);
     padding: 12px 8px;
     text-align: center;
     cursor: pointer;
@@ -276,8 +302,8 @@
   }
   .deck-tile:hover {
     border-color: var(--accent);
-    background: rgba(21,255,0,0.04);
-    box-shadow: 0 0 10px rgba(21,255,0,0.12), inset 0 0 14px rgba(21,255,0,0.04);
+    background: rgba(31,224,255,0.05);
+    box-shadow: 0 0 10px rgba(31,224,255,0.15);
   }
   .deck-tile:active { transform: translateY(1px); }
   .deck-tile.running { border-color: var(--accent-dim); }
@@ -285,11 +311,12 @@
   .deck-tile.failed  { border-color: var(--danger); }
 
   .deck-icon {
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1;
     display: block;
     margin-bottom: 6px;
-    filter: drop-shadow(0 0 6px rgba(21,255,0,0.35));
+    color: var(--accent);
+    filter: drop-shadow(0 0 6px rgba(31,224,255,0.4));
   }
   .deck-label {
     font-size: 11px;
@@ -301,6 +328,7 @@
     text-overflow: ellipsis;
   }
   .deck-state {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
     letter-spacing: 1px;
     color: var(--dim);
@@ -318,7 +346,6 @@
     position: absolute;
     top: 6px; right: 6px;
     width: 6px; height: 6px;
-    border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 6px var(--accent);
   }
@@ -351,11 +378,11 @@
     font-size: 13px;
   }
   .data-label { color: var(--dim); letter-spacing: 1px; }
-  .data-val   { color: var(--accent); font-weight: bold; }
+  .data-val   { font-family: 'Share Tech Mono', monospace; color: var(--accent); font-weight: bold; }
   .data-val.warn  { color: var(--warn); }
   .data-val.danger { color: var(--danger); }
   .data-val.offline { color: var(--danger); animation: blink 1.5s infinite; }
-  .data-val.telemetry { color: var(--blue); }
+  .data-val.telemetry { color: var(--accent); }
 
   /* Battery bar */
   .battery-icon {
@@ -365,19 +392,16 @@
   }
   .battery-body {
     width: 40px; height: 18px;
-    border: 2px solid var(--accent);
-    border-radius: 2px;
+    border: 2px solid var(--border-bright);
     position: relative;
     display: inline-block;
-    box-shadow: inset 0 0 4px rgba(21,255,0,0.2);
   }
   .battery-body::after {
     content: '';
     position: absolute;
     right: -5px; top: 3px;
     width: 4px; height: 8px;
-    background: var(--accent);
-    border-radius: 0 1px 1px 0;
+    background: var(--border-bright);
   }
   .battery-fill {
     height: 100%;
@@ -393,6 +417,7 @@
   .bar-label-row {
     display: flex;
     justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 11px;
     margin-bottom: 3px;
   }
@@ -400,7 +425,6 @@
     height: 10px;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 1px;
     overflow: hidden;
   }
   .bar-fill {
@@ -434,6 +458,7 @@
   }
   #rss-list a:hover { color: var(--accent); }
   .rss-date {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 10px;
     color: var(--dim);
     margin-right: 6px;
@@ -446,14 +471,14 @@
     gap: 12px;
   }
   .weather-temp {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 36px;
-    color: var(--accent);
-    text-shadow: 0 0 12px var(--accent);
+    color: var(--text);
     line-height: 1;
   }
   .weather-desc {
     font-size: 12px;
-    color: var(--dim);
+    color: var(--accent);
     letter-spacing: 1px;
   }
   .weather-detail {
@@ -464,9 +489,10 @@
 
   /* Big stat */
   .big-stat {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 28px;
     color: var(--accent);
-    text-shadow: 0 0 10px var(--accent);
+    text-shadow: 0 0 10px var(--accent-dim);
     line-height: 1.1;
   }
   .big-stat-label {
@@ -583,7 +609,7 @@
 
 <div id="header">
   <div class="status-dot" id="global-dot"></div>
-  <span class="logo blink-cursor">PIP-DECK 3000</span>
+  <span class="logo blink-cursor">CYBR-DECK</span>
   <span class="header-sep">|</span>
   <span class="uptime" id="header-uptime">UPTIME --</span>
   <span class="clock-live" id="header-clock">00:00:00</span>
