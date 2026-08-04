@@ -20,7 +20,7 @@
     --danger:   #ff3b4e;
     --blue:     #1fe0ff;
     --header-h: 38px;
-    --deck-h:   34px;
+    --sidebar-w: 58px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -134,30 +134,55 @@
     color: var(--accent);
   }
 
-  /* ── DECK SELECTOR ROW ── */
+  /* ── DECK SELECTOR SIDEBAR ──
+     Fixed left rail below the sticky header. Only ever shown at the narrow
+     widths where sections are viewed one at a time (see the 769px+ block,
+     which hides it entirely once every panel fits on screen at once). */
   #deck-selector {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    z-index: 90;
+    width: var(--sidebar-w);
     display: flex;
-    justify-content: space-around;
+    flex-direction: column;
     background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    height: var(--deck-h);
-    align-items: center;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
   }
   .deck-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 1 0 60px;
     color: var(--dim);
-    font-size: 12px;
+    font-size: 9px;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
+    text-align: center;
     cursor: pointer;
-    padding: 4px 12px;
+    padding: 6px 2px;
     border: 1px solid transparent;
+    border-left: 2px solid transparent;
     transition: all 0.2s ease;
+  }
+  .deck-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deck-btn-icon svg {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 3px rgba(31,224,255,0.3));
   }
   .deck-btn.active {
     color: var(--accent);
-    border-color: var(--border);
-    border-bottom-color: var(--accent);
-    background: rgba(31,224,255,0.06);
+    border-left-color: var(--accent);
+    background: rgba(31,224,255,0.08);
     font-weight: 700;
   }
 
@@ -222,7 +247,7 @@
   }
   #services-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: 6px 12px;
   }
   .svc-row {
@@ -241,7 +266,11 @@
   .svc-name { color: var(--text); flex: 1; }
   .svc-name.down-svc { color: var(--danger); }
 
-  /* ── CONTROL PANEL: service toggles + quick actions + feeder ── */
+  /* Control panel - spans full grid, same as services */
+  #control-panel {
+    grid-column: 1 / -1;
+    min-height: unset;
+  }
   .svc-btn {
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
@@ -259,6 +288,10 @@
   .svc-btn.stop:hover { border-color: var(--danger); color: var(--danger); }
   .svc-btn.busy   { opacity: 0.5; pointer-events: none; }
   .svc-btn.err    { border-color: var(--danger); color: var(--danger); }
+  /* Muted = alerting disabled for this service. Dimmed so a muted row reads
+     at a glance as "silenced on purpose", distinct from svc-dot's up/down. */
+  .svc-btn.muted        { border-color: var(--dim); color: var(--dim); opacity: 0.6; }
+  .svc-btn.muted:hover  { border-color: var(--warn); color: var(--warn); opacity: 1; }
 
   #actions-grid, #feeder-grid {
     display: flex;
@@ -332,6 +365,48 @@
   .deck-status.ok      { color: var(--accent); }
   .deck-status.offline { color: var(--danger); }
 
+  /* ── AUDIO CONTROLS (mic / speaker mute) ── */
+  .audio-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .audio-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    clip-path: polygon(0 6px, 6px 0, 100% 0, 100% 100%, 0 100%);
+    padding: 8px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--dim);
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .audio-btn:hover { border-color: var(--border-bright); }
+  .audio-btn-icon { display: flex; align-items: center; justify-content: center; }
+  .audio-btn-icon svg { width: 16px; height: 16px; }
+  .audio-btn-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+  }
+  .audio-btn.live {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .audio-btn.live .audio-btn-icon svg { filter: drop-shadow(0 0 4px rgba(31,224,255,0.4)); }
+  .audio-btn.muted {
+    color: var(--warn);
+    border-color: rgba(255,176,0,0.4);
+    background: rgba(255,176,0,0.05);
+  }
+  .audio-btn.busy { opacity: 0.55; pointer-events: none; }
+
   #deck-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -341,7 +416,13 @@
     background: var(--bg);
     border: 1px solid var(--border);
     clip-path: polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%);
-    padding: 12px 8px;
+    padding: 14px 8px;
+    min-height: 94px;
+    min-width: 0; /* let grid shrink tiles below label min-content so ellipsis kicks in, instead of blowing out the row width */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     cursor: pointer;
     position: relative;
@@ -369,23 +450,45 @@
     height: 26px;
     filter: drop-shadow(0 0 4px rgba(31,224,255,0.5));
   }
+  .deck-icon-img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    border-radius: 6px;
+    filter: drop-shadow(0 0 6px rgba(31,224,255,0.25));
+  }
   .deck-label {
     font-size: 11px;
     letter-spacing: 1px;
     color: var(--text);
     display: block;
+    width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /* Collapsed to zero height while idle so the icon+label sit centred in the
+     tile; expanding this on launch/running/fail is what makes the icon glide
+     upward smoothly instead of jumping. */
   .deck-state {
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
     letter-spacing: 1px;
     color: var(--dim);
-    margin-top: 4px;
     display: block;
-    min-height: 11px;
+    width: 100%;
+    height: 0;
+    margin-top: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+  }
+  .deck-state.on,
+  .deck-state.err,
+  .deck-state.launch {
+    height: 11px;
+    margin-top: 6px;
+    opacity: 1;
   }
   .deck-state.on     { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
   .deck-state.err    { color: var(--danger); }
@@ -572,14 +675,15 @@
       display: none !important;
     }
 
-    #app { 
-      grid-template-columns: 1fr 1fr; 
+    #app {
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       padding: 8px;
+      padding-left: calc(var(--sidebar-w) + 8px);
     }
-    
+
     /* Services, Resources, and RSS always fit full width on mobile screens */
-    #services-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
+    #services-panel, #control-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
       grid-column: 1 / -1 !important;
     }
     
@@ -598,6 +702,7 @@
     .panel.deck-hidden { display: block !important; }
     #app { grid-template-columns: 1fr 1fr 1fr; }
     #services-panel { grid-column: 1 / -1; }
+    #control-panel  { grid-column: 1 / -1; }
     #battery-panel    { grid-column: 1; }
     #wifi-panel       { grid-column: 2; }
     #pc-panel         { grid-column: 1; }
@@ -615,7 +720,7 @@
      column, a header that fits, and controls big enough to hit with a thumb.
      Declared last so it overrides the !important rules in the 768px block. */
   @media (max-width: 560px) {
-    :root { --deck-h: 44px; }
+    :root { --sidebar-w: 50px; }
 
     /* Uptime is dropped rather than shrunk — the SYSTEM panel already shows it,
        and reclaiming that width is what lets the rest of the bar fit. */
@@ -625,17 +730,9 @@
     #header .clock-live { font-size: 11px; letter-spacing: 1px; }
     .fullscreen-toggle { font-size: 9px; padding: 4px 6px; }
 
-    /* Equal-width tabs filling the full 44px bar, so the hit area is the button */
-    .deck-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      font-size: 10px;
-      letter-spacing: 1px;
-      padding: 0 2px;
-    }
+    /* Slightly tighter rail so it doesn't eat too much of a narrow screen */
+    .deck-btn { font-size: 8px; letter-spacing: 1px; gap: 4px; }
+    .deck-btn-icon svg { width: 16px; height: 16px; }
 
     /* Single column: at this width two columns leave ~163px of panel content,
        which runs data labels straight into their values. */
@@ -643,6 +740,7 @@
       grid-template-columns: 1fr !important;
       gap: 8px;
       padding: 8px 8px 24px;
+      padding-left: calc(var(--sidebar-w) + 8px);
     }
     #app > .panel { grid-column: 1 / -1 !important; }
     /* 160px leaves dead space under short panels once they're full-width */
@@ -666,12 +764,24 @@
   <span class="fullscreen-toggle" id="fullscreen-btn">[FULLSCREEN]</span>
 </div>
 
-<div id="deck-selector">
-  <div class="deck-btn active" onclick="switchDeck('core')">[CORE]</div>
-  <div class="deck-btn" onclick="switchDeck('sys')">[VITAL]</div>
-  <div class="deck-btn" onclick="switchDeck('env')">[PERIPH]</div>
-  <div class="deck-btn" onclick="switchDeck('deck')">[DECK]</div>
-</div>
+<nav id="deck-selector">
+  <div class="deck-btn active" onclick="switchDeck('core')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-7 4 14 3-10 2 3h5"/></svg></span>
+    <span class="deck-btn-label">CORE</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('sys')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.2"/><line x1="9" y1="2" x2="9" y2="7"/><line x1="15" y1="2" x2="15" y2="7"/><line x1="9" y1="17" x2="9" y2="22"/><line x1="15" y1="17" x2="15" y2="22"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="22" y2="9"/><line x1="17" y1="15" x2="22" y2="15"/></svg></span>
+    <span class="deck-btn-label">VITAL</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('env')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><path d="M5.3 12.3a9 9 0 0 1 13.4 0"/><path d="M2.2 9.2a13.2 13.2 0 0 1 19.6 0"/></svg></span>
+    <span class="deck-btn-label">PERIPH</span>
+  </div>
+  <div class="deck-btn" onclick="switchDeck('deck')">
+    <span class="deck-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg></span>
+    <span class="deck-btn-label">DECK</span>
+  </div>
+</nav>
 
 <div id="app">
 
@@ -785,6 +895,16 @@
   <!-- PC APP LAUNCHER (Deck View) -->
   <div class="panel" id="deck-panel" data-title="[ LAUNCH DECK ]" data-deck="deck">
     <div class="deck-status" id="deck-status">SCANNING PC LINK...</div>
+    <div class="audio-controls">
+      <button class="audio-btn" id="mic-btn" onclick="toggleAudio('mic')">
+        <span class="audio-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>
+        <span class="audio-btn-label" id="mic-label">MIC --</span>
+      </button>
+      <button class="audio-btn" id="speaker-btn" onclick="toggleAudio('speaker')">
+        <span class="audio-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg></span>
+        <span class="audio-btn-label" id="speaker-label">SPKR --</span>
+      </button>
+    </div>
     <div id="deck-grid"></div>
   </div>
 
@@ -946,6 +1066,7 @@ function updateHeader(d) {
 // serving this very request. Both get a confirm() speed bump, not a block.
 const SVC_STOP_CONFIRM = new Set(['cloudflared', 'webhook']);
 const svcBusy = new Set();
+const alertBusySet = new Set();
 
 function updateServices(d) {
   const svcs = d.services || {};
@@ -959,17 +1080,27 @@ function updateServices(d) {
     ? Object.fromEntries(meta.map(m => [m.key, m.label]))
     : FALLBACK_LABELS;
 
+  const alertState = {};
+  if (meta && meta.length) {
+    for (const m of meta) alertState[m.key] = m.alert !== false;
+  }
+
   let html = '';
   for (const key of order) {
     const status = svcs[key];
     if (status === undefined) continue;
     const up = status === 'running' || status === 'online';
     const busy = svcBusy.has(key);
+    const alertOn = key in alertState ? alertState[key] : true;
+    const alertBusy = alertBusySet.has(key);
     html += `<div class="svc-row" data-svc="${key}">
       <span class="svc-dot ${up ? 'up' : 'down'}"></span>
       <span class="svc-name ${up ? '' : 'down-svc'}">${labels[key] || key}</span>
       <button class="svc-btn ${up ? 'stop' : ''} ${busy ? 'busy' : ''}"
         onclick="serviceAction('${key}', ${up})">${busy ? '...' : (up ? 'Stop' : 'Start')}</button>
+      <button class="svc-btn ${alertOn ? '' : 'muted'} ${alertBusy ? 'busy' : ''}"
+        title="${alertOn ? 'Alerts on — click to mute' : 'Alerts muted — click to unmute'}"
+        onclick="toggleAlert('${key}', ${alertOn})">${alertBusy ? '...' : (alertOn ? 'Mute' : 'Unmute')}</button>
     </div>`;
   }
   document.getElementById('services-grid').innerHTML = html;
@@ -994,6 +1125,23 @@ async function serviceAction(key, currentlyUp) {
   } finally {
     svcBusy.delete(key);
     setTimeout(fetchData, 1000);
+  }
+}
+
+async function toggleAlert(key, currentlyOn) {
+  if (alertBusySet.has(key)) return;
+  alertBusySet.add(key);
+  const btn = document.querySelector(`.svc-row[data-svc="${key}"] .svc-btn:last-child`);
+  if (btn) { btn.classList.add('busy'); btn.textContent = '...'; }
+  try {
+    const resp = await fetch(apiUrl('/service/alert', { service: key, enabled: !currentlyOn }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.error) throw new Error(d.error || 'failed');
+  } catch (e) {
+    if (btn) btn.classList.add('err');
+  } finally {
+    alertBusySet.delete(key);
+    setTimeout(fetchData, 500);
   }
 }
 
@@ -1148,108 +1296,37 @@ function updateRSS(items) {
   ).join('');
 }
 
-// ── CUSTOM PIXEL-ART DECK ICONS ──
-// Hand-authored 10x10 monochrome bitmaps rendered as inline SVG rects (fill:
-// currentColor), so they inherit the tile's cyan glow instead of pulling in
-// full-color emoji that clash with the rest of the HUD. Keyed by app-config
-// key; unknown keys fall back to ICON_GRIDS.default.
-const ICON_GRIDS = {
-  chrome: [        // globe / network ring
-    '...####...',
-    '.##....##.',
-    '#........#',
-    '#........#',
-    '#........#',
-    '#........#',
-    '#........#',
-    '#........#',
-    '.##....##.',
-    '...####...',
-  ],
-  spotify: [        // eighth note
-    '........#.',
-    '........##',
-    '........#.',
-    '........#.',
-    '........#.',
-    '........#.',
-    '........#.',
-    '.####...#.',
-    '#....#..#.',
-    '.####.....',
-  ],
-  discord: [        // comms bubble
-    '.########.',
-    '#........#',
-    '#........#',
-    '#.##..##.#',
-    '#.##..##.#',
-    '#........#',
-    '#........#',
-    '.########.',
-    '...##.....',
-    '..#.......',
-  ],
-  steam: [          // controller
-    '..######..',
-    '.########.',
-    '##########',
-    '#.##..##.#',
-    '#.##..##.#',
-    '##########',
-    '.##....##.',
-    '..#....#..',
-    '..........',
-    '..........',
-  ],
-  forza: [          // side-view race car
-    '..........',
-    '....##....',
-    '...####...',
-    '..######..',
-    '.########.',
-    '##########',
-    '#.#....#.#',
-    '..#....#..',
-    '..........',
-    '..........',
-  ],
-  terminal: [       // >_ prompt
-    '..........',
-    '..........',
-    '..#.......',
-    '...##.....',
-    '.....##...',
-    '.....##...',
-    '...##.....',
-    '..#.......',
-    '..........',
-    '....######',
-  ],
-  default: [        // diamond marker
-    '....##....',
-    '...####...',
-    '..######..',
-    '.########.',
-    '##########',
-    '##########',
-    '.########.',
-    '..######..',
-    '...####...',
-    '....##....',
-  ],
+// ── DECK APP ICONS ──
+// Full-colour app logos, inlined as base64 SVG data URIs so the page stays a
+// single self-contained file (same pattern as everything else here — no extra
+// server route needed to serve an /icons folder). Source: official brand SVGs
+// from the walkxcode/dashboard-icons set (chrome/spotify/discord/steam/terminal),
+// Anthropic's own mark for `claude`, and cursor.com's own favicon for `cursor`.
+// `fc26` has no public square icon anywhere (Steam only caches box art for it),
+// so it's a small hand-drawn ball badge, same treatment as the old forza icon.
+// `valorant` is pulled straight from the installed game's own icon resource
+// (the .ico the VALORANT.lnk shortcut points at), not a third-party pack.
+// Unmapped keys fall back to DEFAULT_ICON_SVG, a plain cyan diamond.
+const ICON_IMAGES = {
+  chrome: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBmaWxsPSJub25lIiB2aWV3Qm94PSIwIDAgMTkwIDE5MCI+PGxpbmVhckdyYWRpZW50IGlkPSJkIiB4MT0iMjguMyIgeDI9IjgwLjgiIHkxPSI3NSIgeTI9IjQ0LjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNhNTI3MTQiIHN0b3Atb3BhY2l0eT0iLjYiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjYTUyNzE0IiBzdG9wLW9wYWNpdHk9IjAiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iZiIgeDE9IjEwOS45IiB4Mj0iNTEuNSIgeTE9IjE2NC41IiB5Mj0iMTMwLjMiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwNTU1MjQiIHN0b3Atb3BhY2l0eT0iLjQiLz48c3RvcCBvZmZzZXQ9Ii4zIiBzdG9wLWNvbG9yPSIjMDU1NTI0IiBzdG9wLW9wYWNpdHk9IjAiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iaCIgeDE9IjEyMS45IiB4Mj0iMTM2LjYiIHkxPSI0OS44IiB5Mj0iMTE0LjEiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNlYTYxMDAiIHN0b3Atb3BhY2l0eT0iLjMiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjZWE2MTAwIiBzdG9wLW9wYWNpdHk9IjAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0iYSIgY3g9IjkxLjIiIGN5PSI1NSIgcj0iODQuMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzNlMjcyMyIgc3RvcC1vcGFjaXR5PSIuMiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzNlMjcyMyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgeGxpbms6aHJlZj0iI2EiIGlkPSJpIiBjeD0iMjAuOSIgY3k9IjQ3LjUiIHI9Ijc4Ii8+PHJhZGlhbEdyYWRpZW50IGlkPSJqIiBjeD0iOTQuOCIgY3k9Ijk1LjEiIHI9Ijg3LjkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyNjMyMzgiIHN0b3Atb3BhY2l0eT0iLjIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMyNjMyMzgiIHN0b3Atb3BhY2l0eT0iMCIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJrIiBjeD0iMzMuMyIgY3k9IjMxIiByPSIxNzYuOCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIuMSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48Y2xpcFBhdGggaWQ9ImIiPjxjaXJjbGUgY3g9Ijk1IiBjeT0iOTUiIHI9Ijg4Ii8+PC9jbGlwUGF0aD48ZyBjbGlwLXBhdGg9InVybCgjYikiPjx1c2UgeGxpbms6aHJlZj0iI2MiIGZpbGw9IiNkYjQ0MzciLz48dXNlIHhsaW5rOmhyZWY9IiNjIiBmaWxsPSJ1cmwoI2QpIi8+PHVzZSB4bGluazpocmVmPSIjZSIgZmlsbD0iIzBmOWQ1OCIvPjx1c2UgeGxpbms6aHJlZj0iI2UiIGZpbGw9InVybCgjZikiLz48dXNlIHhsaW5rOmhyZWY9IiNnIiBmaWxsPSIjZmZjZDQwIi8+PHVzZSB4bGluazpocmVmPSIjZyIgZmlsbD0idXJsKCNoKSIvPjxnIGZpbGwtb3BhY2l0eT0iLjEiPjxwYXRoIGZpbGw9IiMzZTI3MjMiIGQ9Ik02MS4zIDExNC43IDIxIDQ3LjRsMzkgNjcuOHoiLz48cGF0aCBmaWxsPSIjMjYzMjM4IiBkPSJtMTI4LjggMTE2LjMtLjgtLjQtMzcuMyA2NyAzOC4zLTY3eiIvPjwvZz48cGF0aCBpZD0iZSIgZD0iTTcgMTgzaDgzLjhsMzktMzl2LTI5SDYwLjJMNyAyMy41eiIvPjxwYXRoIGlkPSJnIiBkPSJtOTUgNTUgMzQuNiA2MEw5MSAxODNoOTJWNTV6Ii8+PHBhdGggaWQ9ImMiIGQ9Ik0yMSA3djEwOGgzOS40TDk1IDU1aDg4Vjd6Ii8+PHBhdGggZmlsbD0idXJsKCNhKSIgZD0iTTk1IDU1djIxbDc4LjQtMjF6Ii8+PHBhdGggZmlsbD0idXJsKCNpKSIgZD0ibTIxIDQ3LjUgNTcuMiA1Ny4yTDYwLjQgMTE1eiIvPjxwYXRoIGZpbGw9InVybCgjaikiIGQ9Im05MC44IDE4MyAyMS03OC4zIDE3LjggMTAuM3oiLz48Y2lyY2xlIGN4PSI5NSIgY3k9Ijk1IiByPSI0MCIgZmlsbD0iI2YxZjFmMSIvPjxjaXJjbGUgY3g9Ijk1IiBjeT0iOTUiIHI9IjMyIiBmaWxsPSIjNDI4NWY0Ii8+PGNpcmNsZSBjeD0iOTUiIGN5PSI5NSIgcj0iODgiIGZpbGw9InVybCgjaykiLz48ZyBmaWxsPSIjM2UyNzIzIiBmaWxsLW9wYWNpdHk9Ii4xIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMTI5LjYgMTE1YTQwIDQwIDAgMCAxLTY5LjIgMEw3IDI0LjUgNjAuNCAxMTZhNDAgNDAgMCAwIDAgNjkuMiAweiIvPjxwYXRoIGQ9Ik05NiA1NWgtLjVhNDAgNDAgMCAxIDEgMCA4MGguNWMyMiAwIDQwLTE4IDQwLTQwcy0xOC00MC00MC00MG0tMSAxMjdhODggODggMCAwIDAgODgtODcuNXYuNUE4OCA4OCAwIDAgMSA3IDk1di0uNUE4OCA4OCAwIDAgMCA5NSAxODIiLz48ZyBmaWxsLW9wYWNpdHk9Ii4yIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMTMwIDExNi4zYTM5LjMgMzkuMyAwIDAgMCAzLjQtMzIgMzggMzggMCAwIDEtMy44IDMwLjdMOTIgMTgzbDM4LjItNjYuNXpNOTUgOGE4OCA4OCAwIDAgMSA4OCA4Ny41Vjk1QTg4IDg4IDAgMCAwIDcgOTV2LjVBODggODggMCAwIDEgOTUgOCIvPjxwYXRoIGQ9Ik05NSA1NGMtMjIgMC00MCAxOC00MCA0MHYxYzAtMjIgMTgtNDAgNDAtNDBoODh2LTF6Ii8+PC9nPjwvZz48L2c+PC9zdmc+",
+  spotify: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbDpzcGFjZT0icHJlc2VydmUiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBkPSJNMjU2IDBDMTE0LjcgMCAwIDExNC43IDAgMjU2czExNC43IDI1NiAyNTYgMjU2IDI1Ni0xMTQuNyAyNTYtMjU2UzM5Ny4zIDAgMjU2IDAiIHN0eWxlPSJmaWxsOiMxZWQ3NjAiLz48cGF0aCBkPSJNNDE5LjcgMjMwLjNjLTUuNCAwLTguNy0xLjMtMTMuMy00LTczLjUtNDMuOS0yMDQuOS01NC40LTI5MC0zMC43LTMuNyAxLTguNCAyLjctMTMuMyAyLjctMTMuNiAwLTI0LjEtMTAuNi0yNC4xLTI0LjQgMC0xNCA4LjctMjIgMTgtMjQuNyAzNi4zLTEwLjYgNzctMTUuNyAxMjEuMy0xNS43IDc1LjQgMCAxNTQuMyAxNS43IDIxMiA0OS4zIDguMSA0LjYgMTMuMyAxMSAxMy4zIDIzLjMuMSAxNC4yLTExLjMgMjQuMi0yMy45IDI0LjJtLTMyIDc4LjdjLTUuNCAwLTktMi40LTEyLjctNC4zLTY0LjUtMzguMi0xNjAuNy01My42LTI0Ni4zLTMwLjMtNSAxLjMtNy42IDIuNy0xMi4zIDIuNy0xMSAwLTIwLTktMjAtMjBzNS40LTE4LjQgMTYtMjEuNGMyOC43LTguMSA1OC0xNCAxMDEtMTQgNjcgMCAxMzEuNyAxNi42IDE4Mi43IDQ3IDguNCA1IDExLjcgMTEuNCAxMS43IDIwLjMtLjIgMTEtOC44IDIwLTIwLjEgMjBtLTI3LjggNjcuN2MtNC4zIDAtNy0xLjMtMTEtMy43LTY0LjQtMzguOC0xMzkuNC00MC41LTIxMy40LTI1LjMtNCAxLTkuMyAyLjctMTIuMyAyLjctMTAgMC0xNi4zLTcuOS0xNi4zLTE2LjMgMC0xMC42IDYuMy0xNS43IDE0LTE3LjMgODQuNS0xOC43IDE3MC45LTE3IDI0NC42IDI3IDYuMyA0IDEwIDcuNiAxMCAxN3MtNy4yIDE1LjktMTUuNiAxNS45Ii8+PC9zdmc+",
+  discord: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbDpzcGFjZT0icHJlc2VydmUiIHZpZXdCb3g9IjAuMDIgNTcuOCA1MTEuOTIgMzk2LjMiPjxwYXRoIGQ9Ik00MzMuNyA5MWE0MTYuNSA0MTYuNSAwIDAgMC0xMDUuNi0zMy4yYy00LjYgOC4yLTkuOSAxOS4zLTEzLjUgMjguMS0zOS40LTUuOS03OC40LTUuOS0xMTcuMSAwLTMuNy04LjgtOS4xLTE5LjktMTMuNy0yOC4xLTM3LjEgNi40LTcyLjYgMTcuNy0xMDUuNyAzMy4zLTY2LjggMTAxLTg1IDE5OS41LTc1LjkgMjk2LjYgNDQuMyAzMy4xIDg3LjMgNTMuMiAxMjkuNiA2Ni40IDEwLjQtMTQuNCAxOS43LTI5LjYgMjcuNy00NS43LTE1LjMtNS44LTI5LjktMTMtNDMuNy0yMS4zIDMuNy0yLjcgNy4yLTUuNiAxMC43LTguNSA4NC4yIDM5LjQgMTc1LjggMzkuNCAyNTkgMCAzLjUgMi45IDcuMSA1LjggMTAuNyA4LjUtMTMuOSA4LjMtMjguNSAxNS41LTQzLjggMjEuMyA4IDE2IDE3LjMgMzEuMyAyNy43IDQ1LjcgNDIuMy0xMy4yIDg1LjMtMzMuMyAxMjkuNi02Ni40IDEwLjgtMTEyLjUtMTgtMjEwLjEtNzYtMjk2LjdNMTcwLjkgMzI4Yy0yNS4zIDAtNDYtMjMuNi00Ni01Mi40czIwLjMtNTIuNCA0Ni01Mi40IDQ2LjUgMjMuNiA0NiA1Mi40Yy4xIDI4LjgtMjAuMiA1Mi40LTQ2IDUyLjRtMTcwLjIgMGMtMjUuMyAwLTQ2LTIzLjYtNDYtNTIuNHMyMC4zLTUyLjQgNDYtNTIuNCA0Ni41IDIzLjYgNDYgNTIuNGMwIDI4LjgtMjAuMyA1Mi40LTQ2IDUyLjQiIHN0eWxlPSJmaWxsOiM1ODY1ZjIiLz48L3N2Zz4=",
+  steam: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWw6c3BhY2U9InByZXNlcnZlIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHN5bWJvbCBpZD0iYiIgdmlld0JveD0iLTMyIC0zMiA2NCA2NCI+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iNzc2Mi42NDgiIHgyPSI3NzYyLjY0OCIgeTE9Ii04NDU0LjMxMyIgeTI9Ii04NDUzLjMxMyIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCg2My45MzEgMCAwIDY0IC00OTYyNzMuODQ0IDU0MTA0NCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9IjAiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMTFkMmUiLz48c3RvcCBvZmZzZXQ9Ii4yMTIiIHN0eWxlPSJzdG9wLWNvbG9yOiMwNTE4MzkiLz48c3RvcCBvZmZzZXQ9Ii40MDciIHN0eWxlPSJzdG9wLWNvbG9yOiMwYTFiNDgiLz48c3RvcCBvZmZzZXQ9Ii41ODEiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMzJlNjIiLz48c3RvcCBvZmZzZXQ9Ii43MzgiIHN0eWxlPSJzdG9wLWNvbG9yOiMxNDRiN2UiLz48c3RvcCBvZmZzZXQ9Ii44NzMiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMzY0OTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMzg3YjgiLz48L2xpbmVhckdyYWRpZW50PjxwYXRoIGQ9Ik0tMzAuNyA5LjJDLTI2LjcgMjIuNC0xNC41IDMyIDAgMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJTMTcuNy0zMiAwLTMyYy0xNyAwLTMwLjkgMTMuMi0zMiAyOS45IDIuMSAzLjUgMi45IDUuNiAxLjMgMTEuMyIgc3R5bGU9ImZpbGw6dXJsKCNhKSIvPjxwYXRoIGQ9Ik0tMS43LTh2LjJMLTkuNSAzLjVjLTEuMy0uMS0yLjUuMi0zLjcuNy0uNS4yLTEgLjUtMS41LjhsLTE3LjItNy4xcy0uNCA2LjUgMS4zIDExLjRsMTIuMiA1Yy42IDIuNyAyLjUgNS4xIDUuMiA2LjMgNC41IDEuOSA5LjctLjMgMTEuNi00LjguNS0xLjIuNy0yLjQuNy0zLjdsMTEuMi04aC4zYzYuNyAwIDEyLjItNS41IDEyLjItMTIuMnMtNS40LTEyLjItMTIuMi0xMi4yQzMuOC0yMC4yLTEuNy0xNC43LTEuNy04bS0xLjggMjNjLTEuNSAzLjUtNS41IDUuMS05IDMuNy0xLjUtLjctMi44LTEuOC0zLjUtMy40bDQgMS42YzIuNiAxLjEgNS41LS4xIDYuNi0yLjdzLS4xLTUuNS0yLjctNi42TC0xMi4zIDZjMS42LS42IDMuNC0uNiA1IC4xIDEuNy43IDMgMiAzLjcgMy43cy43IDMuNS4xIDUuMk0xMC41LjFDNiAuMSAyLjQtMy41IDIuNC04czMuNi04LjEgOC4xLTguMSA4LjEgMy42IDguMSA4LjFTMTUgLjEgMTAuNS4xTTQuNC04YzAtMy40IDIuNy02LjEgNi4xLTYuMXM2LjEgMi43IDYuMSA2LjEtMi43IDYuMS02LjEgNi4xUzQuNC00LjcgNC40LTgiIHN0eWxlPSJmaWxsOiNmZmYiLz48L3N5bWJvbD48dXNlIHhsaW5rOmhyZWY9IiNiIiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHg9Ii0zMiIgeT0iLTMyIiBzdHlsZT0ib3ZlcmZsb3c6dmlzaWJsZSIgdHJhbnNmb3JtPSJtYXRyaXgoOCAwIDAgOCAyNTYgMjU2KSIvPjwvc3ZnPg==",
+  claude: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+CiAgPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iMTEiIGZpbGw9IiNlZWVjZTEiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg5LDkpIHNjYWxlKDAuMDI1KSI+CiAgICA8cGF0aCBmaWxsPSIjZDk3NzU3IiBkPSJNIDIzMy45NTk3OTMgODAwLjIxNDkwNSBMIDQ2OC42NDQyODcgNjY4LjUzNjk4NyBMIDQ3Mi41OTA2MzcgNjU3LjEwMDY0NyBMIDQ2OC42NDQyODcgNjUwLjczODQwMyBMIDQ1Ny4yMDgwNjkgNjUwLjczODQwMyBMIDQxNy45ODY2MzMgNjQ4LjMyMjE0NCBMIDI4My44OTI2MzkgNjQ0LjY5ODEyIEwgMTY3LjU5NzMyMSA2MzkuODY1ODQ1IEwgNTQuOTI2MjA4IDYzMy44MjU2MjMgTCAyNi41NzcyMzggNjI3Ljc4NTMzOSBMIDMuM2UtMDUgNTkyLjc1MTcwOSBMIDIuNzM4MzIgNTc1LjI3NTMzIEwgMjYuNTc3MjM4IDU1OS4yNDgzNTIgTCA2MC43MjQ4NzMgNTYyLjIyODE0OSBMIDEzNi4xODc5NzMgNTY3LjM4MjYyOSBMIDI0OS40MjI4NjcgNTc1LjE5NDc2MyBMIDMzMS41NzA0OTYgNTgwLjAyNjk3OCBMIDQ1My4yNjE4NDEgNTkyLjY3MTA4MiBMIDQ3Mi41OTA2MzcgNTkyLjY3MTA4MiBMIDQ3NS4zMjg4NTcgNTg0Ljg1OTAwOSBMIDQ2OC43MjQ5MTUgNTgwLjAyNjk3OCBMIDQ2My41NzA1NTcgNTc1LjE5NDc2MyBMIDM0Ni4zODkzMTMgNDk1Ljc4NTIxNyBMIDIxOS41NDM2NzEgNDExLjg2NTkwNiBMIDE1My4xMDA3MjMgMzYzLjU0Mzc2MiBMIDExNy4xODEyNjcgMzM5LjA2MDQyNSBMIDk5LjA2MDQ1NSAzMTYuMTA3MzYxIEwgOTEuMjQ4MzY3IDI2Ni4wMTM1NSBMIDEyMy44NjU3ODQgMjMwLjA5Mzk5NCBMIDE2Ny42Nzc4ODcgMjMzLjA3Mzg1MyBMIDE3OC44NzI1MTMgMjM2LjA1Mzc3MiBMIDIyMy4yNDgzNjcgMjcwLjIwMTQ3NyBMIDMxOC4wNDAyODMgMzQzLjU3MDQ5NiBMIDQ0MS44MjU1OTIgNDM0LjczODM0MiBMIDQ1OS45NDY0MTEgNDQ5Ljc5ODcwNiBMIDQ2Ny4xOTQ2NzIgNDQ0LjY0NDQ3IEwgNDY4LjA4MDU5NyA0NDEuMDIwMjAzIEwgNDU5Ljk0NjQxMSA0MjcuNDA5NDg1IEwgMzkyLjYxNzQ5MyAzMDUuNzE4MzIzIEwgMzIwLjc3ODU2NCAxODEuOTMyOTgzIEwgMjg4LjgwNTQyIDEzMC42MzA4NTkgTCAyODAuMzQ4OTk5IDk5Ljg2NTg0NSBDIDI3Ny4zNjkxNzEgODcuMjIxNDM2IDI3NS4xOTQ2NDEgNzYuNTkwNjk4IDI3NS4xOTQ2NDEgNjMuNjI0MjY4IEwgMzEyLjMyMjE3NCAxMy4yMDgxMyBMIDMzMi44NTkxIDYuNjA0MTI2IEwgMzgyLjM4OTMxMyAxMy4yMDgxMyBMIDQwMy4yNDgzNTIgMzEuMzI4OTc5IEwgNDM0LjAxMzUxOSAxMDEuNzE4MTQgTCA0ODMuODY1NzUzIDIxMi41MzcwNDggTCA1NjEuMTgxMjc0IDM2My4yMjE0OTcgTCA1ODMuODEyMTM0IDQwNy45MTk0MzQgTCA1OTUuODkyNjM5IDQ0OS4zMTU0OTEgTCA2MDAuNDAyNzEgNDYxLjk1OTgzOSBMIDYwOC4yMTQ3ODMgNDYxLjk1OTgzOSBMIDYwOC4yMTQ3ODMgNDU0LjcxMTYwOSBMIDYxNC41NzcyNzEgMzY5LjgyNTYyMyBMIDYyNi4zMzU2MzIgMjY1LjYxMDg0IEwgNjM3Ljc3MTg1MSAxMzEuNTE2ODQ2IEwgNjQxLjcxODIwMSA5My43NDUxMTcgTCA2NjAuNDAyODMyIDQ4LjQ4MzI3NiBMIDY5Ny41MzAzMzQgMjQuMDAwMTIyIEwgNzI2LjUyMzU2IDM3Ljg1MjQxNyBMIDc1MC4zNjI1NDkgNzIgTCA3NDcuMDYwNDg2IDk0LjA2NzEzOSBMIDczMi44ODYwNDcgMTg2LjIwMTQxNiBMIDcwNS4xMDA3MDggMzMwLjUyMzU2IEwgNjg2Ljk3OTkxOSA0MjcuMTY3ODQ3IEwgNjk3LjUzMDMzNCA0MjcuMTY3ODQ3IEwgNzA5LjYxMDg0IDQxNS4wODczNDEgTCA3NTguNDk2NzA0IDM1MC4xNzQ1NjEgTCA4NDAuNjQ0MzQ4IDI0Ny40OTAwNTEgTCA4NzYuODg1OTI1IDIwNi43MzgzNDIgTCA5MTkuMTY3ODQ3IDE2MS43MTgxNCBMIDk0Ni4zMDg4MzggMTQwLjI5NTQxIEwgOTk3LjYxMDg0IDE0MC4yOTU0MSBMIDEwMzUuMzgyNjkgMTk2LjQyOTYyNiBMIDEwMTguNDY5ODQ5IDI1NC40MTYxOTkgTCA5NjUuNjM3NjM0IDMyMS40MjI4NTIgTCA5MjEuODI1NTYyIDM3OC4yMDE1MzggTCA4NTkuMDA2NzE0IDQ2Mi43NjUyNTkgTCA4MTkuNzg1Mjc4IDUzMC40MTYyNiBMIDgyMy40MDk0MjQgNTM1LjgxMjA3MyBMIDgzMi43NTE3NyA1MzQuOTI2MjcgTCA5NzQuNjU3Nzc2IDUwNC43MjQ5MTUgTCAxMDUxLjMyODk3OSA0OTAuODcyNTU5IEwgMTE0Mi44MTg4NDggNDc1LjE2Nzc4NiBMIDExODQuMjE0ODQ0IDQ5NC40OTY1ODIgTCAxMTg4LjcyNDg1NCA1MTQuMTQ3NjQ0IEwgMTE3Mi40NTY0MjEgNTU0LjMzNTY5MyBMIDEwNzQuNjA0MTI2IDU3OC40OTY3NjUgTCA5NTkuODM4OTg5IDYwMS40NDk4MjkgTCA3ODguOTM5NjM2IDY0MS44NzkyNzIgTCA3ODYuODQ1NzY0IDY0My40MDk0ODUgTCA3ODkuMjYxODQxIDY0Ni4zODkzNDMgTCA4NjYuMjU1MTI3IDY1My42Mzc2MzQgTCA4OTkuMTk0NzAyIDY1NS40MDk0MjQgTCA5NzkuODEyMTM0IDY1NS40MDk0MjQgTCAxMTI5LjkzMjg2MSA2NjYuNjA0MTg3IEwgMTE2OS4xNTQ0MTkgNjkyLjUzNzEwOSBMIDExOTIuNjcxMjY1IDcyNC4yNjg2NzcgTCAxMTg4LjcyNDg1NCA3NDguNDI5Njg4IEwgMTEyOC4zMjIxNDQgNzc5LjE5NDY0MSBMIDEwNDYuODE4ODQ4IDc1OS44NjU4NDUgTCA4NTYuNTkwNzU5IDcxNC42MDQxMjYgTCA3OTEuMzU1Nzc0IDY5OC4zMzU3NTQgTCA3ODIuMzM1NjkzIDY5OC4zMzU3NTQgTCA3ODIuMzM1NjkzIDcwMy43MzE1NjcgTCA4MzYuNjk4MTIgNzU2Ljg4NTk4NiBMIDkzNi4zMjIyMDUgODQ2Ljg0NTU4MSBMIDEwNjEuMDczOTc1IDk2Mi44MTg5NyBMIDEwNjcuNDM2Mjc5IDk5MS40OTAxMTIgTCAxMDUxLjQwOTQyNCAxMDE0LjEyMDkxMSBMIDEwMzQuNDk2NzA0IDEwMTEuNzA0NzEyIEwgOTI0Ljg4NTk4NiA5MjkuMjM0OTI0IEwgODgyLjYwNDEyNiA4OTIuMTA3NTQ0IEwgNzg2Ljg0NTc2NCA4MTEuNDg5OTkgTCA3ODAuNDgzMjc2IDgxMS40ODk5OSBMIDc4MC40ODMyNzYgODE5Ljk0NjI4OSBMIDgwMi41NTA0MTUgODUyLjI0MTY5OSBMIDkxOS4wODczNDEgMTAyNy40MDk0MjQgTCA5MjUuMTI3NjI1IDEwODEuMTI3Njg2IEwgOTE2LjY3MTIwNCAxMDk4LjYwNDEyNiBMIDg4Ni40Njk4NDkgMTEwOS4xNTQ0MTkgTCA4NTMuMjg4Njk2IDExMDMuMTE0MTM2IEwgNzg1LjA3MzkxNCAxMDA3LjM1NTgzNSBMIDcxNC42ODQ2MzEgODk5LjUxNjc4NSBMIDY1Ny45MDYwNjcgODAyLjg3MjQ5OCBMIDY1MC45Nzk4NTggODA2LjgxODk3IEwgNjE3LjQ3NjYyNCAxMTY3LjcwNDgzNCBMIDYwMS43NzE4NTEgMTE4Ni4xNDc3MDUgTCA1NjUuNTMwMjEyIDEyMDAgTCA1MzUuMzI4ODU3IDExNzcuMDQ2OTk3IEwgNTE5LjMwMjEyNCAxMTM5LjkxOTU1NiBMIDUzNS4zMjg4NTcgMTA2Ni41NTA1MzcgTCA1NTQuNjU3Nzc2IDk3MC43OTIwNTMgTCA1NzAuMzYyNDg4IDg5NC42ODQ1NyBMIDU4NC41MzY5MjYgODAwLjEzNDI3NyBMIDU5Mi45OTMzNDcgNzY4LjcyNDk3NiBMIDU5Mi40Mjk2MjYgNzY2LjYzMDg1OSBMIDU4NS41MDM0NzkgNzY3LjUxNjk2OCBMIDUxNC4yMjgyMSA4NjUuMzY5MjYzIEwgNDA1LjgyNTUzMSAxMDExLjg2NTkwNiBMIDMyMC4wNTM3MTEgMTEwMy42Nzc5NzkgTCAyOTkuNTE2ODE1IDExMTEuODEyMjU2IEwgMjYzLjkxOTUyNSAxMDkzLjM2OTI2MyBMIDI2Ny4yMjE0OTcgMTA2MC40Mjk2ODggTCAyODcuMTE0MTM2IDEwMzEuMTE0MTM2IEwgNDA1LjgyNTUzMSA4ODAuMTA3MzYxIEwgNDc3LjQyMjkxMyA3ODYuNTIzNTYgTCA1MjMuNjUxMDYyIDczMi40ODMyNzYgTCA1MjMuMzI4OTE4IDcyNC42NzEyNjUgTCA1MjAuNTkwNjk4IDcyNC42NzEyNjUgTCAyMDUuMjg4NjA1IDkyOS4zOTU5MzUgTCAxNDkuMTU0NDM0IDkzNi42NDQ0MDkgTCAxMjQuOTkzMzU1IDkxNC4wMTM1NSBMIDEyNy45NzMxODMgODc2Ljg4NTk4NiBMIDEzOS40MDk0MDkgODY0LjgwNTQyIEwgMjM0LjIwMTM4NSA3OTkuNTcwNDM1IEwgMjMzLjg3OTIyNyA3OTkuODkyNyBaIi8+CiAgPC9nPgo8L3N2Zz4K",
+  cursor: "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHdpZHRoPSI1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0ibTUxMiAzMjUuNWMwIDcuMTI0IDAgMTQuMjQtLjA0MSAyMS4zNjQtLjAzNCA1Ljk5OS0uMTAzIDExLjk5OC0uMjY4IDE3Ljk5LS4zNTYgMTMuMDY4LTEuMTI0IDI2LjI0NS0zLjQ0OCAzOS4xNjktMi4zNTkgMTMuMTA5LTYuMjA1IDI1LjMwNi0xMi4yNjYgMzcuMjIyLTUuOTU4IDExLjcwMy0xMy43NDYgMjIuNDE5LTIzLjAyOSAzMS43MDktOS4yOSA5LjI5LTIwIDE3LjA3Mi0zMS43MSAyMy4wMy0xMS45MDkgNi4wNjEtMjQuMTEzIDkuOTA3LTM3LjIyMiAxMi4yNjYtMTIuOTIzIDIuMzI0LTI2LjEwMSAzLjA5Mi0zOS4xNjkgMy40NDgtNS45OTkuMTY1LTExLjk5MS4yMzMtMTcuOTkuMjY4LTcuMTIzLjA0OC0xNC4yNC4wNDEtMjEuMzY0LjA0MWgtMTM5Yy03LjEyNCAwLTE0LjI0IDAtMjEuMzY0LS4wNDEtNS45OTktLjAzNS0xMS45OTgtLjEwMy0xNy45OS0uMjY4LTEzLjA2OC0uMzU2LTI2LjI0NS0xLjEyNC0zOS4xNjktMy40NDgtMTMuMTA5LTIuMzU5LTI1LjMwNi02LjIwNS0zNy4yMjE5LTEyLjI2Ni0xMS43MDMzLTUuOTU4LTIyLjQxOTQtMTMuNzQ2LTMxLjcwOTUtMjMuMDMtOS4yOS05LjI5LTE3LjA3MTctMTkuOTk5LTIzLjAyOTYtMzEuNzA5LTYuMDYwOC0xMS45MDktOS45MDcwNy0yNC4xMTMtMTIuMjY1NTctMzcuMjIyLTIuMzI0MjItMTIuOTI0LTMuMDkyMS0yNi4xMDEtMy40NDg2MTgtMzkuMTY5LS4xNjQ1NDYtNS45OTktLjIzMzEwNzEtMTEuOTkxLS4yNjczODc2LTE3Ljk5LS4wMjc0MjQ0LTcuMTI0LS4wMjc0MjQ0LTE0LjI0LS4wMjc0MjQ0LTIxLjM2NHYtMTM5YzAtNy4xMjQgMC0xNC4yNC4wNDExMzY2LTIxLjM2NC4wMzQyODA1LTUuOTk5LjEwMjg0MTQtMTEuOTk4LjI2NzM4ODQtMTcuOTkuMzU2NTE3LTEzLjA2OCAxLjEyNDQwNS0yNi4yNDUgMy40NDg2MTUtMzkuMTY5IDIuMzU4NS0xMy4xMDkxIDYuMjA0NzgtMjUuMzA2MSAxMi4yNjU1Ni0zNy4yMjIgNS45NTgtMTEuNzAzNCAxMy43NDY1LTIyLjQxOTUgMjMuMDI5Ny0zMS43MDk1IDkuMjktOS4yOSAxOS45OTkyLTE3LjA3MTcgMzEuNzA5NC0yMy4wMjk2IDExLjkwOTEtNi4wNjA4NCAyNC4xMTI5LTkuOTA3MTEgMzcuMjIyMi0xMi4yNjU2MSAxMi45MjMtMi4zMjQyMiAyNi4xMDEtMy4wOTIxMDQgMzkuMTY5LTMuNDQ4NjIyIDUuOTk5LS4xNjQ1NDYgMTEuOTkxLS4yMzMxMDcgMTcuOTktLjI2NzM4NzUgNy4xMTctLjAzNDI4MDUgMTQuMjMzLS4wMzQyODA1IDIxLjM1Ny0uMDM0MjgwNWgxMzljNy4xMjQgMCAxNC4yNCAwIDIxLjM2NC4wNDExMzY2IDUuOTk5LjAzNDI4MDUgMTEuOTk4LjEwMjg0MTQgMTcuOTkuMjY3Mzg4NCAxMy4wNjguMzU2NTE3IDI2LjI0NSAxLjEyNDQwNSAzOS4xNjkgMy40NDg2MTUgMTMuMTA5IDIuMzU4NSAyNS4zMDYgNi4yMDQ3OCAzNy4yMjIgMTIuMjY1NTYgMTEuNzAzIDUuOTU4IDIyLjQxOSAxMy43NDY1IDMxLjcwOSAyMy4wMjk3IDkuMjkgOS4yOSAxNy4wNzIgMTkuOTk5MiAyMy4wMyAzMS43MDk0IDYuMDYxIDExLjkwOTEgOS45MDcgMjQuMTEyOSAxMi4yNjYgMzcuMjIyMiAyLjMyNCAxMi45MjMgMy4wOTIgMjYuMTAxIDMuNDQ4IDM5LjE2OS4xNjUgNS45OTkuMjMzIDExLjk5MS4yNjggMTcuOTkuMDQ4IDcuMTIzLjA0MSAxNC4yNC4wNDEgMjEuMzY0djEzOXoiIGZpbGw9IiMxNDEyMGIiLz48cGF0aCBkPSJtMTg2LjUgNGgxMzljNy4xMjUgMCAxNC4yMzEtLjAwMDA0IDIxLjM0MS4wNDEwMiA1Ljk4NS4wMzQyIDExLjk1Mi4xMDIyMSAxNy45MDMuMjY1NjJoLjAwMWMxMy4wMDMuMzU0NzUgMjUuOTQzIDEuMTE3MDkgMzguNTY5IDMuMzg3NyAxMi43NzUgMi4yOTgyNyAyNC41OTIgNi4wMzE0NiAzNi4xMTggMTEuODkzNTZ2LS4wMDFjMTAuOTc0IDUuNTg2NyAyMS4wNTIgMTIuODM4NCAyOS44NDggMjEuNDU3bC44NDcuODM3OWM4Ljk5MyA4Ljk5MyAxNi41MjUgMTkuMzU5NCAyMi4yOTIgMzAuNjkzNHYuMDAxYzUuNjc4IDExLjE1NzUgOS4zNiAyMi42MDIzIDExLjY3NCAzNC45MjA4bC4yMTkgMS4xOTVjMi4xMjkgMTEuODM3IDIuOTMyIDIzLjk1IDMuMzE2IDM2LjEzMmwuMDcyIDIuNDM4Yy4xNjQgNS45NTguMjMyIDExLjkxOS4yNjYgMTcuOTA0di4wMDRjLjA0OCA3LjEwNy4wNDEgMTQuMjA3LjA0MSAyMS4zMzd2MTI5LjM0NGwtLjAwNy0uMDA3djkuNjU2YzAgNy4xMjUgMCAxNC4yMzEtLjA0MSAyMS4zNDEtLjAzNCA1Ljk4NS0uMTAyIDExLjk1Mi0uMjY2IDE3LjkwM3YuMDAxYy0uMzU0IDEzLjAwMy0xLjExNyAyNS45NDMtMy4zODcgMzguNTY5LTIuMjI3IDEyLjM3Ni01LjggMjMuODUzLTExLjM1MSAzNS4wMzdsLS41NDMgMS4wOGMtNS43NjYgMTEuMzI3LTEzLjMwNiAyMS43MDEtMjIuMjkzIDMwLjY5NS04Ljk5MyA4Ljk5My0xOS4zNjEgMTYuNTI2LTMwLjY5NSAyMi4yOTMtMTEuNTE4IDUuODYxLTIzLjM0MiA5LjU5NS0zNi4xMTYgMTEuODkzLTExLjgzNyAyLjEyOS0yMy45NSAyLjkzMi0zNi4xMzIgMy4zMTZsLTIuNDM4LjA3MmMtNS45NTguMTY0LTExLjkxOS4yMzItMTcuOTA0LjI2NmgtLjAwNGMtNy4xMDcuMDQ4LTE0LjIwNy4wNDEtMjEuMzM3LjA0MWgtMTM5Yy03LjEyNSAwLTE0LjIzMSAwLTIxLjM0MS0uMDQxLTUuOTg1LS4wMzQtMTEuOTUyLS4xMDItMTcuOTAzLS4yNjZoLS4wMDFjLTEzLjAwMy0uMzU1LTI1Ljk0NC0xLjExNy0zOC41Ny0zLjM4OC0xMi43NzQyLTIuMjk4LTI0LjU5MTQtNi4wMzEtMzYuMTE2NS0xMS44OTNoLjAwMWMtMTAuOTc0LTUuNTg3LTIxLjA1MzQtMTIuODM3LTI5Ljg0OTYtMjEuNDU2bC0uODQ2Ny0uODM4Yy04LjcxMTgtOC43MTItMTYuMDUzMS0xOC43MTMtMjEuNzQ2MS0yOS42MzRsLS41NDU5LTEuMDYtLjU0MzktMS4wODFjLTUuMzcxLTEwLjgxNi04Ljg5MDUtMjEuOTE5LTExLjEyOTkxLTMzLjg0bC0uMjE5NzMtMS4xOTZjLTIuMjcwNjEtMTIuNjI2LTMuMDMyOTQtMjUuNTY2LTMuMzg3NjktMzguNTY5di0uMDAxYy0uMTYzNDEtNS45NTgtLjIzMTQyLTExLjkxOC0uMjY1NjMtMTcuOTAzLS4wMjczNi03LjExMi0uMDI3MzQtMTQuMjE5LS4wMjczNC0yMS4zNDF2LTEzOWMwLTcuMTI1LS4wMDAwNC0xNC4yMzEuMDQxMDItMjEuMzQxLjAzNDItNS45ODUuMTAyMjEtMTEuOTUyLjI2NTYyLTE3LjkwM3YtLjAwMWMuMzU0NzYtMTMuMDAzIDEuMTE3LTI1Ljk0NCAzLjM4NzctMzguNTcgMi4yOTgyOC0xMi43NzQ0IDYuMDMxNTYtMjQuNTkxNiAxMS44OTM1Ni0zNi4xMTY2bC0uMDAxLS4wMDFjNS43NjY2LTExLjMyNyAxMy4zMDczLTIxLjY5OTkgMjIuMjk0LTMwLjY5MzQgOC45OTMzLTguOTkzMyAxOS4zNjA3LTE2LjUyNjEgMzAuNjk1My0yMi4yOTI5IDExLjUxNzMtNS44NjE1IDIzLjM0MDYtOS41OTYxOSAzNi4xMTQ4LTExLjg5NDU4IDExLjgzNy0yLjEyODc3IDIzLjk1MS0yLjkzMDE2IDM2LjEzMy0zLjMxNDQ1bDIuNDM4LS4wNzIyN2M1Ljk1OC0uMTYzNDIgMTEuOTE5LS4yMzE0MiAxNy45MDQtLjI2NTYybC0uMDAxLS4wMDA5OGM3LjEwNC0uMDM0MjEgMTQuMjExLS4wMzMyIDIxLjMzNS0uMDMzMnoiIHN0cm9rZT0iI2VkZWNlYyIgc3Ryb2tlLW9wYWNpdHk9Ii4yIiBzdHJva2Utd2lkdGg9IjgiLz48cGF0aCBkPSJtNDE1LjAzNSAxNTYuMzUtMTUxLjUwMy04Ny40Njk1Yy00Ljg2NS0yLjgwOTQtMTAuODY4LTIuODA5NC0xNS43MzMgMGwtMTUxLjQ5NjkgODcuNDY5NWMtNC4wODk3IDIuMzYyLTYuNjE0NiA2LjcyOS02LjYxNDYgMTEuNDU5djE3Ni4zODNjMCA0LjczIDIuNTI0OSA5LjA5NyA2LjYxNDYgMTEuNDU4bDE1MS41MDM5IDg3LjQ3YzQuODY1IDIuODA5IDEwLjg2OCAyLjgwOSAxNS43MzMgMGwxNTEuNTA0LTg3LjQ3YzQuMDg5LTIuMzYxIDYuNjE0LTYuNzI4IDYuNjE0LTExLjQ1OHYtMTc2LjM4M2MwLTQuNzMtMi41MjUtOS4wOTctNi42MTQtMTEuNDU5em0tOS41MTYgMTguNTI4LTE0Ni4yNTUgMjUzLjMyYy0uOTg4IDEuNzA3LTMuNTk5IDEuMDEtMy41OTktLjk2N3YtMTY1Ljg3MmMwLTMuMzE0LTEuNzcxLTYuMzc5LTQuNjQ0LTguMDQ0bC0xNDMuNjQ1LTgyLjkzMmMtMS43MDctLjk4OC0xLjAxLTMuNTk5Ljk2OC0zLjU5OWgyOTIuNTA5YzQuMTU0IDAgNi43NSA0LjUwMyA0LjY3MyA4LjEwMWgtLjAwN3oiIGZpbGw9IiNlZGVjZWMiLz48L3N2Zz4=",
+  fc26: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+DQogIDxkZWZzPg0KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPg0KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOGNmZjVhIi8+DQogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwYjdhMzQiLz4NCiAgICA8L2xpbmVhckdyYWRpZW50Pg0KICA8L2RlZnM+DQogIDxyZWN0IHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+DQogIDxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjEzLjIiIGZpbGw9IiNmZGZkZmQiLz4NCiAgPHBhdGggZD0iTTI0LjAwLDEwLjgwIEwyMC4zNiwxMS4zMSBBMTMuMjAsMTMuMjAgMCAwIDEgMjcuNjQsMTEuMzEgWiIgZmlsbD0iIzExMSIvPjxwYXRoIGQ9Ik0zNi41NSwxOS45MiBMMzQuOTQsMTYuNjIgQTEzLjIwLDEzLjIwIDAgMCAxIDM3LjE5LDIzLjU0IFoiIGZpbGw9IiMxMTEiLz48cGF0aCBkPSJNMzEuNzYsMzQuNjggTDM0LjQwLDMyLjEzIEExMy4yMCwxMy4yMCAwIDAgMSAyOC41MSwzNi40MCBaIiBmaWxsPSIjMTExIi8+PHBhdGggZD0iTTE2LjI0LDM0LjY4IEwxOS40OSwzNi40MCBBMTMuMjAsMTMuMjAgMCAwIDEgMTMuNjAsMzIuMTMgWiIgZmlsbD0iIzExMSIvPjxwYXRoIGQ9Ik0xMS40NSwxOS45MiBMMTAuODEsMjMuNTQgQTEzLjIwLDEzLjIwIDAgMCAxIDEzLjA2LDE2LjYyIFoiIGZpbGw9IiMxMTEiLz4NCiAgPHBhdGggZD0iTTI0LjAwLDE3LjgwIEwyOS45MCwyMi4wOCBMMjcuNjQsMjkuMDIgTDIwLjM2LDI5LjAyIEwxOC4xMCwyMi4wOCBaIiBmaWxsPSIjMTExIi8+DQogIDxsaW5lIHgxPSIyNC4wMCIgeTE9IjE3LjgwIiB4Mj0iMjQuMDAiIHkyPSIxMC44MCIgc3Ryb2tlPSIjMTExIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGxpbmUgeDE9IjI5LjkwIiB5MT0iMjIuMDgiIHgyPSIzNi41NSIgeTI9IjE5LjkyIiBzdHJva2U9IiMxMTEiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48bGluZSB4MT0iMjcuNjQiIHkxPSIyOS4wMiIgeDI9IjMxLjc2IiB5Mj0iMzQuNjgiIHN0cm9rZT0iIzExMSIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxsaW5lIHgxPSIyMC4zNiIgeTE9IjI5LjAyIiB4Mj0iMTYuMjQiIHkyPSIzNC42OCIgc3Ryb2tlPSIjMTExIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PGxpbmUgeDE9IjE4LjEwIiB5MT0iMjIuMDgiIHgyPSIxMS40NSIgeTI9IjE5LjkyIiBzdHJva2U9IiMxMTEiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4NCjwvc3ZnPg0K",
+  valorant: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAjNSURBVHhe7d2/jh5XGQZwl3RIFEggQSJixJ8QAwUJyCgOtoXXEn+CEForLRIFEh1XwDUguchN5AqQKOiQUtDR0NAhe4tcwEfOeuysJ+9Z73x7ZubMvL9H+lUxnPl2vvPYeWTEDRERERERERERERERERERERERERERERERERFJkLMHp68/PTl9/OTB6dnZw0cHYBnlzpW7V+7gcB2XzZOHH9x+evLok+jhgGWUO1ju4nAtl8mz3/ldfujB+V1c8k8C53/0CB4EWEe5k8P1nD/+nR/6Uu7kcD3nzX/u3PlC9ADAuoYrOn+iw4F1Dddz/kSHA+saruf8iQ4H1jVcz/kTHQ6sa7ie8yc6HFjXcD3nT3R4zcd33z98+M59YKJyd6I7VTNcz/kTHV5TPsgXv/IGMFG5O9Gdqhmu5/yJDq9RAHAcBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCWNGHb98//PNnvz7cu/n98J/Tv/Luyjss7zL6571TACt587XvvHj+f9//7eFbX/92+OvoV3ln5d09f4/lnUa/rmcKYCUXC6D4+51fHr781Zvhr6U/5V2Vd3bxHSqAhokOr9lDAWz1c2QVXRwF0DDR4TV7KYDiT2/9JPz19KO8o+jdKYCGiQ6v2VMB/O/k9PDgmz8I/zOsr7yb8o6id6cAGiY6vGZPBVAYBfs0Hv3GFEDDRIfX7K0ACqNgX6LRb0wBNEx0eM0eC6DY4ufaq6tcFAXQMNHhNXstgMIouL7a6DemABomOrxmzwVgFFzXZaPfmAJomOjwmj0XQGEUXMerRr8xBdAw0eE1ey+Awii4rKuMfmMKoGGiw2syFECxxc+5VVMvRqEAGiY6vCZLARRGwflddfQbUwANEx1ek6kAjILzmjL6jSmAhokOr8lUAIVRcB5TR78xBdAw0eE12QqgMAq2dczoN6YAGiY6vCZjARRb/Ny9mnoRIgqgYaLDa7IWQGEUvL5jR78xBdAw0eE1mQvAKHg91xn9xhRAw0SH12QugMIoeJzrjn5jCqBhosNrshdAYRScpsXoN6YAGiY6vEYBPLPFn8Napn7xr0IBNEx0eI0C+IxR8NVajX5jCqBhosNrFMBnjIKXazn6jSmAhokOr1EALzMKxlqPfmMKoGGiw2sUwOcZBV82x+g3pgAaJjq8RgHEtvhzmcvUL/oxFEDDRIfXKIA6o+B8o9+YAmiY6PAaBVCXfRScc/QbUwANEx1eowAul3UUnHv0G1MADRMdXqMAXi3bKLjE6DemABomOrxGAVzNFn9Ox5r6xW5BATRMdHiNAri6DKPgUqPfmAJomOjwGgVwdXsfBZcc/cYUQMNEh9cogGn2OgouPfqNKYCGiQ6vUQDT7W0UXGP0G1MADRMdXqMAjrPFn1vN1C/yHBRAw0SH1yiA4+1hFFxr9BtTAA0THV6jAI639VFwzdFvTAE0THR4jQK4nq2OgmuPfmMKoGGiw2sUwPVtbRTsYfQbUwANEx1eowDa2NLPceoXdwkKoGGiw2sUQDtbGAV7Gf3GFEDDRIfXKIB2eh8Fexr9xhRAw0SH1yiAtnodBXsb/cYUQMNEh9dssQCKnr/MvY2CPY5+F5V3GT137xTAin7/5jvh5+lFTz/XqV/UpZV3GT137xTAyh6/fS/8TL3oYRTsdfR7rrzD6Lm3QAGs7Euf+tu7vwg/Vw/WHgV7Hv2K8u7KO4yefQsUQAdufq3vcWutUbD30a88W3l30bNvhQLoxHtv3Or6d7qlR8HeR7/yrso7i559SxRAR/5gFHxh6hdzaeVdRc+9NQqgM0ZBo9+SFEBnso+CRr9lKYAOZR0FjX7LUwCdyjYKGv3WoQA6lmkUnPpFXNpeRr8xBdC5DKOg0W89CqBzex8FjX7rUgAbsNdR0Oi3PgWwEXscBf9863b439WD//78d7sc/cYUwIbsbRS89dp3D/9471eHf937TVc+uv3w8NNvvBU+894ogI3xNwVpSQFsTPa/KUhbCmCDsv5NQdpTABuV7W8KMg8FsGH+58NclwLYOKMg16EANs4oyHUogB0wCnIsBbATRkGOoQB2xCjIVApgZ4yCTKEAdsYoyBQKYIeMglyVAtgpoyBXoQB2zCjIqyiAnTMKchkFsHNGQS6jABIwClKjAJIwChJRAIkYBRlTAMkYBblIASRjFOQiBZCQUZDnFEBSRkEKBZCYURAFkJxRMDcFkJxRMDcFgFEwMQXAOaNgTgqAF3ofBcteET03x1MAvOSvP7ob/ox7ET0zx1MAfM4fv/fj82Ew+v/OX9Nffvhu+LwcTwFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJKQBITAFAYgoAElMAkJgCgMQUACSmACAxBQCJ7aIAPr77/vkHAaYpdye6UzXD9Zw/0eHAuobrOX+iw4F1Dddz/kSHA+saruf8iQ4H1jVcz/kTHQ6sa7ie8yc6HFjXcD3nz5MHp2fRAwDrKHdyuJ7z5+nJ6ePoIYB1lDs5XM/5c/bg9PWnJ48+iR4EWNb5Xfz0Tg7Xc5k8efjBbSUA6yp3sNzF4Voum2d/Ejh9bBOAZZU7d/6v4kv/zi8iIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIia+TGjf8D1ARR+El+0jAAAAAASUVORK5CYII=",
+  terminal: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgc3R5bGU9ImRpc3BsYXk6aW5saW5lIiB2ZXJzaW9uPSIxLjAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYiI+PHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjojMmQyODM5O3N0b3Atb3BhY2l0eToxIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdHlsZT0ic3RvcC1jb2xvcjojMjgyNDMzO3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImQiPjxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6I2ZmZjtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6I2ZmZjtzdG9wLW9wYWNpdHk6LjA5NDExNzY1Ii8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImEiPjxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6Izc3NzY3YjtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iLjA1IiBzdHlsZT0ic3RvcC1jb2xvcjojYzBiZmJjO3N0b3Atb3BhY2l0eToxIi8+PHN0b3Agb2Zmc2V0PSIuMSIgc3R5bGU9InN0b3AtY29sb3I6IzlhOTk5NjtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iLjkiIHN0eWxlPSJzdG9wLWNvbG9yOiM5YTk5OTY7c3RvcC1vcGFjaXR5OjEiLz48c3RvcCBvZmZzZXQ9Ii45NSIgc3R5bGU9InN0b3AtY29sb3I6I2MwYmZiYztzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6Izc3NzY3YjtzdG9wLW9wYWNpdHk6MSIvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IHhsaW5rOmhyZWY9IiNhIiBpZD0iZSIgeDE9IjQ4IiB4Mj0iNDY0IiB5MT0iNDQiIHkyPSI0NCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiLz48bGluZWFyR3JhZGllbnQgeGxpbms6aHJlZj0iI2IiIGlkPSJnIiB4MT0iNzAuMzQ3IiB4Mj0iNzAuMzQ3IiB5MT0iMjQ1LjM5NSIgeTI9IjI2OS4xMzciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIi8+PHJhZGlhbEdyYWRpZW50IHhsaW5rOmhyZWY9IiNkIiBpZD0iZiIgY3g9IjY0IiBjeT0iMTk0LjE5IiByPSI0NCIgZng9IjY0IiBmeT0iMTk0LjE5IiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC00LjcyNzI3IDAgMCAtMS42MzYzNiAyMzguNTQ1IDQ5Ljc2NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIi8+PC9kZWZzPjxnIHN0eWxlPSJkaXNwbGF5OmlubGluZSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMTcyKSI+PHJlY3Qgd2lkdGg9IjQxNiIgaGVpZ2h0PSIzNzYiIHg9IjQ4IiB5PSItMTI0IiByeD0iMzIiIHJ5PSIzMiIgc3R5bGU9ImRpc3BsYXk6aW5saW5lO29wYWNpdHk6MTtmaWxsOnVybCgjZSk7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOm5vbmU7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLWRhc2hvZmZzZXQ6MDtzdHJva2Utb3BhY2l0eToxO21hcmtlcjpub25lO21hcmtlci1zdGFydDpub25lO21hcmtlci1taWQ6bm9uZTttYXJrZXItZW5kOm5vbmU7cGFpbnQtb3JkZXI6bm9ybWFsIiB0cmFuc2Zvcm09Im1hdHJpeCguMjUgMCAwIC4yNSAwIDIyNSkiLz48cmVjdCB3aWR0aD0iNDE2IiBoZWlnaHQ9IjM4NCIgeD0iNDgiIHk9Ii0xNjQiIHJ4PSIzMiIgcnk9IjMyIiBzdHlsZT0iZGlzcGxheTppbmxpbmU7b3BhY2l0eToxO2ZpbGw6I2RlZGRkYTtmaWxsLW9wYWNpdHk6MTtzdHJva2U6bm9uZTtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2UtZGFzaG9mZnNldDowO3N0cm9rZS1vcGFjaXR5OjE7bWFya2VyOm5vbmU7bWFya2VyLXN0YXJ0Om5vbmU7bWFya2VyLW1pZDpub25lO21hcmtlci1lbmQ6bm9uZTtwYWludC1vcmRlcjpub3JtYWwiIHRyYW5zZm9ybT0ibWF0cml4KC4yNSAwIDAgLjI1IDAgMjI1KSIvPjxyZWN0IHdpZHRoPSI5NiIgaGVpZ2h0PSI4OCIgeD0iMTYiIHk9Ii0yNzYiIHJ4PSI0IiByeT0iNCIgc3R5bGU9ImRpc3BsYXk6aW5saW5lO29wYWNpdHk6MTt2ZWN0b3ItZWZmZWN0Om5vbmU7ZmlsbDojMjQxZjMxO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTpub25lO3N0cm9rZS13aWR0aDouMDExMjEwOTZweDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2UtZGFzaG9mZnNldDowO3N0cm9rZS1vcGFjaXR5OjE7bWFya2VyOm5vbmU7bWFya2VyLXN0YXJ0Om5vbmU7bWFya2VyLW1pZDpub25lO21hcmtlci1lbmQ6bm9uZTtwYWludC1vcmRlcjpub3JtYWwiIHRyYW5zZm9ybT0ic2NhbGUoMSAtMSkiLz48cGF0aCBkPSJNLTEwOC0yNzJoODh2NzhoLTg4eiIgc3R5bGU9ImRpc3BsYXk6aW5saW5lO29wYWNpdHk6LjA1O3ZlY3Rvci1lZmZlY3Q6bm9uZTtmaWxsOnVybCgjZik7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOm5vbmU7c3Ryb2tlLXdpZHRoOi4wMTEyMTA5NnB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1kYXNob2Zmc2V0OjA7c3Ryb2tlLW9wYWNpdHk6MTttYXJrZXI6bm9uZTttYXJrZXItc3RhcnQ6bm9uZTttYXJrZXItbWlkOm5vbmU7bWFya2VyLWVuZDpub25lO3BhaW50LW9yZGVyOm5vcm1hbCIgdHJhbnNmb3JtPSJzY2FsZSgtMSkiLz48ZyBzdHlsZT0iZmlsbDojZmZmIj48cGF0aCBkPSJNNDQuMDEyIDIxMC44ODggMzAgMjAzLjI3MlYyMDhsOS43MSA0LjYzdi4xNDJMMzAgMjE4djQuNzI4bDE0LjAxMi04LjIxNHpNNDggMjI2djRoMTZ2LTR6IiBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC12YXJpYW50Om5vcm1hbDtmb250LXdlaWdodDo3MDA7Zm9udC1zdHJldGNoOm5vcm1hbDtmb250LXNpemU6bWVkaXVtO2xpbmUtaGVpZ2h0OjEuMjU7Zm9udC1mYW1pbHk6JnF1b3Q7U291cmNlIENvZGUgUHJvJnF1b3Q7Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246JnF1b3Q7U291cmNlIENvZGUgUHJvLCBCb2xkJnF1b3Q7O2ZvbnQtdmFyaWFudC1saWdhdHVyZXM6bm9ybWFsO2ZvbnQtdmFyaWFudC1jYXBzOm5vcm1hbDtmb250LXZhcmlhbnQtbnVtZXJpYzpub3JtYWw7Zm9udC1mZWF0dXJlLXNldHRpbmdzOm5vcm1hbDt0ZXh0LWFsaWduOnN0YXJ0O2xldHRlci1zcGFjaW5nOjA7d29yZC1zcGFjaW5nOjA7d3JpdGluZy1tb2RlOmxyLXRiO3RleHQtYW5jaG9yOnN0YXJ0O2ZpbGw6I2ZmZjtmaWxsLW9wYWNpdHk6MTtzdHJva2U6bm9uZTtzdHJva2Utd2lkdGg6LjI0OTk5OTk5IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMiAtMikiLz48L2c+PHBhdGggZD0iTTEwMCAyNDRoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptODQgNGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em03NiA0aDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bTg0IDRoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptNzYgNGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em04NCA0aDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bTc2IDRoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHptLTggMGg0djRoLTR6bS04IDBoNHY0aC00em0tOCAwaDR2NGgtNHoiIHN0eWxlPSJvcGFjaXR5OjE7dmVjdG9yLWVmZmVjdDpub25lO2ZpbGw6dXJsKCNnKTtmaWxsLW9wYWNpdHk6MTtzdHJva2U6bm9uZTtzdHJva2Utd2lkdGg6ODtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLWRhc2hvZmZzZXQ6MDtzdHJva2Utb3BhY2l0eToxO21hcmtlcjpub25lO21hcmtlci1zdGFydDpub25lO21hcmtlci1taWQ6bm9uZTttYXJrZXItZW5kOm5vbmU7cGFpbnQtb3JkZXI6bm9ybWFsIi8+PC9nPjwvc3ZnPgo=",
 };
 
-function pixelIconSVG(key) {
-  const rows = ICON_GRIDS[key] || ICON_GRIDS.default;
-  const size = rows.length;
-  let rects = '';
-  rows.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
-      if (row[x] === '#') rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
-    }
-  });
-  return `<svg viewBox="0 0 ${size} ${size}" fill="currentColor" shape-rendering="crispEdges">${rects}</svg>`;
+const DEFAULT_ICON_SVG = `<svg viewBox="0 0 10 10" fill="currentColor" shape-rendering="crispEdges">
+<rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="7" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="7" y="3" width="1" height="1"/><rect x="8" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="7" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="9" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/><rect x="8" y="5" width="1" height="1"/><rect x="9" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="7" y="6" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="2" y="7" width="1" height="1"/><rect x="3" y="7" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="5" y="7" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="7" y="7" width="1" height="1"/><rect x="3" y="8" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="5" y="8" width="1" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="4" y="9" width="1" height="1"/><rect x="5" y="9" width="1" height="1"/></svg>`;
+
+function deckIconMarkup(key) {
+  const src = ICON_IMAGES[key];
+  return src
+    ? `<img class="deck-icon-img" src="${src}" alt="" draggable="false">`
+    : DEFAULT_ICON_SVG;
 }
 
 // ── PC LAUNCH DECK ──
@@ -1297,7 +1374,7 @@ function renderDeck(apps) {
       ${a.running && a.closable
         ? `<span class="deck-close" title="Close" onclick="closeApp(event,'${a.key}')">[X]</span>`
         : ''}
-      <span class="deck-icon">${pixelIconSVG(a.key)}</span>
+      <span class="deck-icon">${deckIconMarkup(a.key)}</span>
       <span class="deck-label">${a.label || a.key}</span>
       <span class="deck-state ${a.running ? 'on' : ''}">${a.running ? 'RUNNING' : ''}</span>
     </div>`).join('');
@@ -1353,6 +1430,60 @@ function launchApp(key) {
 function closeApp(event, key) {
   event.stopPropagation();   // don't trigger the tile's launch handler
   deckAction(key, '/deck/close', 'CLOSING...', 'CLOSED', 'FAILED');
+}
+
+// ── AUDIO CONTROLS (mic / speaker mute) ──
+const audioBusy = new Set();
+
+function applyAudioState(target, muted) {
+  const btn = document.getElementById(target + '-btn');
+  const label = document.getElementById(target + '-label');
+  if (!btn || !label) return;
+  btn.classList.remove('live', 'muted');
+  btn.classList.add(muted ? 'muted' : 'live');
+  label.textContent = (target === 'mic' ? 'MIC ' : 'SPKR ') + (muted ? 'MUTED' : 'LIVE');
+}
+
+function setAudioOffline() {
+  ['mic', 'speaker'].forEach(target => {
+    const btn = document.getElementById(target + '-btn');
+    const label = document.getElementById(target + '-label');
+    if (!btn || !label) return;
+    btn.classList.remove('live', 'muted');
+    label.textContent = (target === 'mic' ? 'MIC' : 'SPKR') + ' --';
+  });
+}
+
+async function fetchAudio() {
+  try {
+    const resp = await fetch(apiUrl('/audio/status'));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const d = await resp.json();
+    if (d.online === false) { setAudioOffline(); return; }
+    applyAudioState('mic', d.mic_muted);
+    applyAudioState('speaker', d.speaker_muted);
+  } catch (e) {
+    setAudioOffline();
+  }
+}
+
+async function toggleAudio(target) {
+  if (audioBusy.has(target)) return;
+  audioBusy.add(target);
+  const btn = document.getElementById(target + '-btn');
+  if (btn) btn.classList.add('busy');
+
+  try {
+    const resp = await fetch(apiUrl('/audio/toggle', { target }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.status === 'error') throw new Error(d.message || 'failed');
+    applyAudioState(target, d.muted);
+  } catch (e) {
+    console.warn('Audio toggle failed:', e.message);
+  } finally {
+    audioBusy.delete(target);
+    if (btn) btn.classList.remove('busy');
+  }
 }
 
 // ── UPDATE FORZA MINIMAL TELEMETRY STATE ──
@@ -1477,6 +1608,10 @@ setInterval(fetchData, 4000);
 // Deck polls slower — each call shells out to tasklist on the PC
 fetchDeck();
 setInterval(fetchDeck, 8000);
+
+// Same cadence as the deck — both round-trip to the PC agent
+fetchAudio();
+setInterval(fetchAudio, 8000);
 
 // Quick actions are static per session (edit actions.json + reload to pick up changes)
 fetchActions();

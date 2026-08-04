@@ -46,8 +46,23 @@ ntfy user add <username>
 curl 'https://restart.prayas.space/status?token=<token>'
 
 # manually restart a service
-curl 'https://restart.prayas.space/restart?service=picoclaw&token=<token>'
+curl 'https://restart.prayas.space/restart?service=hermes&token=<token>'
+
+# manually stop a service (a confirm prompt only exists in the dashboard UI —
+# this curl form stops immediately, including cloudflared/webhook)
+curl 'https://restart.prayas.space/stop?service=hermes&token=<token>'
+
+# list whitelisted quick actions (keys only — see actions.json for the full set)
+curl 'https://restart.prayas.space/actions/list?token=<token>'
+
+# run a whitelisted quick action
+curl -X POST 'https://restart.prayas.space/action/run?action=run_health_check&token=<token>'
+
+# open the control panel in a browser
+open 'https://restart.prayas.space/dashboard?token=<token>'
 ```
+
+Valid `service=` values and what each does are defined in `services.json`; valid `action=` values are defined in `actions.json` — see [Services](services.md).
 
 ## Cloudflare
 

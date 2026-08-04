@@ -65,47 +65,35 @@ from standup import bp as standup_bp  # noqa: E402
 
 app.register_blueprint(standup_bp)
 
-# ── Services ──────────────────────────────────────────────
-SERVICES = {
-    "sshd": {
-        "check": "pgrep -x sshd",
-        "start": "sshd",
-    },
-    "cloudflared": {
-        "check": "pgrep -f cloudflared",
-        "start": "tmux new-session -d -s cloudflare 'cloudflared tunnel run my-phone'",
-    },
-    "picoclaw": {
-        "check": "pgrep -f picoclaw",
-        "start": "tmux new-session -d -s picoclaw 'proot-distro login ubuntu -- bash -c \"cd ~ && ./picoclaw gateway\"'",
-    },
-    "ntfy": {
-        "check": "pgrep -f 'ntfy serve'",
-        "start": "tmux new-session -d -s ntfy 'proot-distro login ubuntu -- ntfy serve'",
-    },
-    "battery_alert": {
-        "check": "pgrep -f battery_alert.sh",
-        "start": "tmux new-session -d -s battery 'bash ~/cyberdeck/battery_alert.sh'",
-    },
-    "webhook": {
-        "check": "tmux has-session -t webhook",
-        "start": "tmux new-session -d -s webhook 'python3 ~/cyberdeck/webhook.py'",
-    },
-    "feeder": {
-        "check": (
-            f"curl -s --max-time 3 'http://{ESP32_IP}/status?token={SECRET}'" # TODO: change to a proper domain
-        ),
-        "start": None,  # cannot restart ESP32 remotely
-    },
-}
+# Service definitions live in services.json — see service_registry.py.
+# Whitelisted one-tap scripts live in actions.json.
+from service_registry import (  # noqa: E402
+    find_service,
+    load_registry,
+    restart_service,
+    service_meta_list,
+    set_alert,
+    status_dict,
+    stop_service,
+)
 
-SESSION_MAP = {
-    "cloudflared": "cloudflare",
-    "picoclaw": "picoclaw",
-    "ntfy": "ntfy",
-    "battery_alert": "battery",
-    "webhook": "webhook",
-}
+ACTIONS_PATH = Path(__file__).resolve().parent / "actions.json"
+
+
+def load_actions() -> list[dict]:
+    """Read actions.json fresh on every call — same pattern as deck-apps.json."""
+    try:
+        return json.loads(ACTIONS_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"[webhook] Could not read {ACTIONS_PATH.name}: {exc}")
+        return []
+
+
+def find_action(key: str) -> dict | None:
+    for action in load_actions():
+        if action.get("key") == key:
+            return action
+    return None
 
 
 # ── Helpers ──────────────────────────────────────────────
@@ -366,57 +354,117 @@ def restart():
         return jsonify({"error": "Unauthorized"}), 401
 
     service = request.args.get("service")
-    if not service or service not in SERVICES:
-        return jsonify({"error": f"Unknown service. Valid: {list(SERVICES.keys())}"}), 400
+    registry = load_registry()
+    svc = find_service(service, registry) if service else None
+    if svc is None:
+        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
 
-    svc = SERVICES[service]
+    ok, message = restart_service(svc)
+    if ok:
+        return jsonify({"status": message}), 200
+    status_code = 400 if svc.start is None else 500
+    return jsonify({"error": message}), status_code
 
-    if svc["start"] is None:
-        return jsonify({"error": f"{service} cannot be restarted remotely"}), 400
 
-    # check if already running
-    already = subprocess.run(svc["check"], shell=True, capture_output=True)
-    if already.returncode == 0:
-        return jsonify({"status": f"{service} is already running"}), 200
+@app.route("/stop", methods=["GET", "POST"])
+def stop():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
 
-    # kill stale tmux session if exists
-    if service in SESSION_MAP:
-        subprocess.run(
-            f"tmux kill-session -t {SESSION_MAP[service]} 2>/dev/null",
-            shell=True,
+    service = request.args.get("service")
+    registry = load_registry()
+    svc = find_service(service, registry) if service else None
+    if svc is None:
+        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
+
+    if svc.key == "webhook":
+        # Stopping our own tmux session kills this process before the
+        # response can be sent — defer it so the client gets its answer.
+        if svc.stop is None:
+            return jsonify({"error": f"{svc.key} cannot be stopped remotely"}), 400
+        subprocess.Popen(
+            ["sh", "-c", f"sleep 1; {svc.stop}"], start_new_session=True
         )
+        return jsonify({"status": "webhook stop triggered — this session will end in ~1s"}), 200
 
-    result = subprocess.run(svc["start"], shell=True, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        return jsonify({"status": f"{service} restarted successfully"}), 200
-    else:
-        return jsonify({"error": result.stderr}), 500
+    ok, message = stop_service(svc)
+    if ok:
+        return jsonify({"status": message}), 200
+    status_code = 400 if svc.stop is None else 500
+    return jsonify({"error": message}), status_code
 
 
 @app.route("/status", methods=["GET"])
 def status():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
+    return jsonify(status_dict()), 200
 
-    statuses = {}
-    for name, svc in SERVICES.items():
+
+@app.route("/service/alert", methods=["POST"])
+def service_alert():
+    """Enable/disable status_checker alerting for one service, without
+    touching whether it's monitored/restartable — just whether a down
+    reading pages you. Writes the change straight into services.json."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    service = request.args.get("service")
+    enabled_raw = request.args.get("enabled")
+    registry = load_registry()
+    svc = find_service(service, registry) if service else None
+    if svc is None:
+        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
+    if enabled_raw not in ("true", "false"):
+        return jsonify({"error": "enabled must be 'true' or 'false'"}), 400
+
+    enabled = enabled_raw == "true"
+    set_alert(svc.key, enabled)
+    return jsonify({"status": f"{svc.key} alert {'enabled' if enabled else 'disabled'}"}), 200
+
+
+@app.route("/actions/list", methods=["GET"])
+def actions_list():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    # never leak the raw "command" field to the client
+    return jsonify(
+        [
+            {"key": a["key"], "label": a.get("label", a["key"]), "confirm": bool(a.get("confirm"))}
+            for a in load_actions()
+        ]
+    ), 200
+
+
+@app.route("/action/run", methods=["POST"])
+def action_run():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    key = request.args.get("action")
+    action = find_action(key) if key else None
+    if action is None:
+        return jsonify({"error": f"Unknown action. Valid: {[a['key'] for a in load_actions()]}"}), 400
+
+    command = action["command"]
+    if key == "full_restart":
+        # tmux kill-server takes down webhook's own session along with
+        # everything else — background it so the response reaches the
+        # client before the server dies. Nothing can confirm success once
+        # the process that received the request is gone, so this is
+        # necessarily an optimistic "triggered" response, not a real result.
+        subprocess.Popen(["sh", "-c", command], start_new_session=True)
+        return jsonify({"status": f"{key} triggered"}), 200
+
+    try:
         result = subprocess.run(
-            svc["check"],
-            shell=True,
-            capture_output=True,
-            text=True,
+            command, shell=True, capture_output=True, text=True, timeout=60
         )
-
-        if name == "feeder":
-            # feeder check command returns HTTP code text (e.g. "200")
-            http_code = (result.stdout or "").strip()
-            print(f"result: {result} - stdout: {result.stdout}")
-            statuses[name] = "running" if http_code == "online" else "stopped"
-        else:
-            statuses[name] = "running" if result.returncode == 0 else "stopped"
-
-    return jsonify(statuses), 200
+        if result.returncode == 0:
+            return jsonify({"status": f"{key} completed", "output": result.stdout[-2000:]}), 200
+        return jsonify({"error": result.stderr[-2000:] or f"{key} failed"}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": f"{key} timed out"}), 504
 
 @app.route("/feeder-status", methods=["GET"])
 def feeder_status():
@@ -657,64 +705,15 @@ def deck_close():
         ), 503
 
 
-@app.route("/audio/status", methods=["GET"])
-def audio_status():
-    """Report the PC's default mic/speaker mute state."""
-    if not verify_token(request):
-        return jsonify({"error": "Unauthorized"}), 401
-    try:
-        resp = call_pc_agent("audio/status")
-        resp.raise_for_status()
-        return jsonify(resp.json()), 200
-    except Exception:
-        # PC asleep or agent not running — buttons grey out rather than hang
-        return jsonify({"online": False}), 200
-
-
-@app.route("/audio/toggle", methods=["GET", "POST"])
-def audio_toggle():
-    """Toggle mute on the PC's default mic or speaker."""
-    if not verify_token(request):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    target = request.args.get("target")
-    if target not in ("mic", "speaker"):
-        return jsonify({"error": "target must be 'mic' or 'speaker'"}), 400
-
-    try:
-        resp = call_pc_agent("audio/toggle", {"target": target}, timeout=10)
-        return jsonify(resp.json()), resp.status_code
-    except requests.exceptions.RequestException as e:
-        return jsonify(
-            {"status": "error", "message": f"PC agent unreachable: {e}"}
-        ), 503
-
-
 @app.route("/dashboard/data", methods=["GET"])
 def dashboard_data():
     """Aggregate all dashboard widgets into one JSON response."""
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
 
-    # Services
-    services = {}
-    services["sshd"] = "running" if _run("pgrep -x sshd") else "down"
-    services["cloudflared"] = "running" if _run(
-        "ls /proc/*/exe 2>/dev/null | xargs -I{} readlink {} 2>/dev/null | grep -q cloudflared"
-    ) is not None else "down"
-    # services["picoclaw"] = "running" if _run("tmux has-session -t picoclaw 2>/dev/null") is not None else "down"
-    services["ntfy"] = "running" if _run("pgrep -f '[n]tfy serve'") else "down"
-    services["webhook"] = "running" if _run("tmux has-session -t webhook 2>/dev/null") is not None else "down"
-    services["hermes"] = "running" if _run("tmux has-session -t hermes 2>/dev/null") is not None else "down"
-    services["battery_alert"] = "running" if _run("tmux has-session -t battery 2>/dev/null") is not None else "down"
-    services["ferran_alert"] = "running" if _run("tmux has-session -t ferran-alert 2>/dev/null") is not None else "down"
-    services["forza"] = "running" if _run("tmux has-session -t forza 2>/dev/null") is not None else "down"
-    services["feeder"] = "online" if _run(
-        f"curl -sf --max-time 3 'http://{ESP32_IP}/status?token={ESP32_API_TOKEN}'"
-    ) is not None else "offline"
-
     return jsonify({
-        "services": services,
+        "services": status_dict(),
+        "service_meta": service_meta_list(),
         "battery": get_battery_info(),
         "wifi": get_wifi_info(),
         "system": {

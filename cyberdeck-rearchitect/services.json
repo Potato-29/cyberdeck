@@ -46,14 +46,8 @@
     "stop": "tmux kill-session -t forza",
     "tmux_session": "forza", "alert": true, "boot": true },
 
-  { "key": "ferran_alert", "label": "Ferran Alert", "category": "termux",
-    "check": { "mechanism": "tmux", "value": "ferran-alert" },
-    "start": "tmux new-session -d -s ferran-alert 'node ~/cyberdeck/ferran_alert.mjs'",
-    "stop": "tmux kill-session -t ferran-alert",
-    "tmux_session": "ferran-alert", "alert": true, "boot": true },
-
   { "key": "feeder", "label": "Feeder", "category": "esp32",
     "check": { "mechanism": "http", "value": "http://{ESP32_IP}/status?token={ESP32_API_TOKEN}" },
     "start": null, "stop": null, "tmux_session": null,
-    "alert": true, "boot": false }
+    "alert": false, "boot": false }
 ]

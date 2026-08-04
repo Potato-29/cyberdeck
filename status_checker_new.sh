@@ -5,39 +5,18 @@ set -a
 source "${SCRIPT_DIR}/.env"
 set +a
 
-SERVICES=(
-    "sshd|pgrep -x sshd"
-    "cloudflared|pgrep -f cloudflared"
-    
-    "ntfy|pgrep -f '[n]tfy serve'"
-    
-)
-
-for entry in "${SERVICES[@]}"; do
-    NAME="${entry%%|*}"
-    CHECK="${entry##*|}"
-
-    eval "$CHECK" > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        curl -s \
-            -u "$NTFY_USER:$NTFY_PASS" \
-            -H "Title: ⚠️ Service Down" \
-            -H "Priority: high" \
-            -H "Tags: warning,cyberdeck" \
-            -H "Actions: http, Restart $NAME, $RESTART_URL/restart?service=$NAME&token=$WEBHOOK_TOKEN, method=GET" \
-            -d "$NAME is not running on your cyberdeck!" \
-            "$NTFY_URL/$NTFY_TOPIC"
+while IFS=$'\t' read -r NAME LABEL RESTARTABLE; do
+    [[ -z "$NAME" ]] && continue
+    ACTION_ARGS=()
+    if [[ "$RESTARTABLE" == "1" ]]; then
+        ACTION_ARGS=(-H "Actions: http, Restart $LABEL, $RESTART_URL/restart?service=$NAME&token=$WEBHOOK_TOKEN, method=GET")
     fi
-done
-
-# ── ESP32 Cat Feeder check ───────────────────────────────
-ESP32_RESPONSE=$(curl -s --max-time 3 "http://$ESP32_IP/status?token=$ESP32_STATUS_TOKEN")
-#if [[ -z "$ESP32_RESPONSE" ]]; then
-#    curl -s \
-#        -u "$NTFY_USER:$NTFY_PASS" \
-#        -H "Title: 🐱 Cat Feeder Offline" \
-#        -H "Priority: high" \
-#        -H "Tags: warning,cat" \
-#        -d "ESP32 cat feeder is not responding! Check the device." \
-#        "$NTFY_URL/$NTFY_TOPIC"
-#fi
+    curl -s \
+        -u "$NTFY_USER:$NTFY_PASS" \
+        -H "Title: ⚠️ Service Down" \
+        -H "Priority: high" \
+        -H "Tags: warning,cyberdeck" \
+        "${ACTION_ARGS[@]}" \
+        -d "$LABEL is not running on your cyberdeck!" \
+        "$NTFY_URL/$NTFY_TOPIC"
+done < <(python3 "${SCRIPT_DIR}/service_registry.py" --down)

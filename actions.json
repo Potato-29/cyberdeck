@@ -1,0 +1,14 @@
+[
+  {
+    "key": "full_restart",
+    "label": "Full Restart",
+    "confirm": true,
+    "command": "sleep 1; tmux kill-server && bash ~/.termux/boot/startup.sh"
+  },
+  {
+    "key": "run_health_check",
+    "label": "Run Health Check",
+    "confirm": false,
+    "command": "bash ~/cyberdeck/status_checker_new.sh"
+  }
+]

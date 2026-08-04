@@ -24,9 +24,13 @@ These files mirror what typically lives under `~` on the device. They load secre
 
 | File | Role |
 | --- | --- |
-| `webhook.py` / `webhook_new.py` | Flask restart/status/feed server (port 2122) |
-| `status_checker.sh` / `status_checker_new.sh` | Cron health checks → ntfy with restart actions |
-| `battery_alert.sh` | Battery TTS and notifications |
+| `services.json` | Service registry — single source of truth (check/start/stop, boot, alert) |
+| `service_registry.py` | Reads `services.json`; shared by webhook, status checker, startup.sh |
+| `actions.json` | Whitelisted quick-action scripts for the dashboard control panel |
+| `startup.sh` | Tracked copy of `~/.termux/boot/startup.sh` |
+| `webhook_new.py` | Flask restart/stop/status/dashboard/actions/feed server (port 2122) |
+| `status_checker_new.sh` | Cron health checks (every 5 min) → ntfy with restart actions |
+| `battery_alert.sh` | Battery TTS and notifications (currently boot-disabled, manual start only) |
 | `pc-telemetry-monitor.py` | PC LibreHardwareMonitor poll for wtfutil |
 | `pc-deck-agent.py` + `deck-apps.json` | **Runs on the PC** — whitelisted app launcher (port 8086) |
 | `standup.py` + `standup.html` | Daily work log, Friday update generator (blueprint on 2122) |

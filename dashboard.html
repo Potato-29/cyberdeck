@@ -247,7 +247,7 @@
   }
   #services-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: 6px 12px;
   }
   .svc-row {
@@ -263,8 +263,63 @@
   }
   .svc-dot.up   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
   .svc-dot.down { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
-  .svc-name { color: var(--text); }
+  .svc-name { color: var(--text); flex: 1; }
   .svc-name.down-svc { color: var(--danger); }
+
+  /* Control panel - spans full grid, same as services */
+  #control-panel {
+    grid-column: 1 / -1;
+    min-height: unset;
+  }
+  .svc-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .svc-btn:hover  { border-color: var(--accent); color: var(--accent); }
+  .svc-btn.stop   { border-color: var(--accent-dim); color: var(--accent); }
+  .svc-btn.stop:hover { border-color: var(--danger); color: var(--danger); }
+  .svc-btn.busy   { opacity: 0.5; pointer-events: none; }
+  .svc-btn.err    { border-color: var(--danger); color: var(--danger); }
+  /* Muted = alerting disabled for this service. Dimmed so a muted row reads
+     at a glance as "silenced on purpose", distinct from svc-dot's up/down. */
+  .svc-btn.muted        { border-color: var(--dim); color: var(--dim); opacity: 0.6; }
+  .svc-btn.muted:hover  { border-color: var(--warn); color: var(--warn); opacity: 1; }
+
+  #actions-grid, #feeder-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .action-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  }
+  .action-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(31,224,255,0.15); }
+  .action-btn.busy  { opacity: 0.5; pointer-events: none; }
+  .action-btn.ok    { border-color: var(--accent-dim); color: var(--accent); }
+  .action-btn.err   { border-color: var(--danger); color: var(--danger); }
+  .control-subhead {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    margin: 12px 0 6px;
+  }
+  .control-subhead:first-child { margin-top: 0; }
 
   /* Battery + WiFi row */
   #battery-panel    { grid-column: 1; }
@@ -628,7 +683,7 @@
     }
 
     /* Services, Resources, and RSS always fit full width on mobile screens */
-    #services-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
+    #services-panel, #control-panel, #resources-panel, #rss-panel, #forza-panel, #deck-panel {
       grid-column: 1 / -1 !important;
     }
     
@@ -647,6 +702,7 @@
     .panel.deck-hidden { display: block !important; }
     #app { grid-template-columns: 1fr 1fr 1fr; }
     #services-panel { grid-column: 1 / -1; }
+    #control-panel  { grid-column: 1 / -1; }
     #battery-panel    { grid-column: 1; }
     #wifi-panel       { grid-column: 2; }
     #pc-panel         { grid-column: 1; }
@@ -731,6 +787,17 @@
 
   <div class="panel" id="services-panel" data-title="[ SERVICES ]" data-deck="core">
     <div id="services-grid"></div>
+  </div>
+
+  <div class="panel" id="control-panel" data-title="[ CONTROL ]" data-deck="core">
+    <div class="control-subhead">QUICK ACTIONS</div>
+    <div id="actions-grid"><span style="color:var(--dim);font-size:11px">Loading...</span></div>
+    <div class="control-subhead">CAT FEEDER</div>
+    <div id="feeder-grid">
+      <button class="action-btn" onclick="feederAction('/feed','Feed Now')">Feed Now</button>
+      <button class="action-btn" onclick="feederAction('/door-open','Open Door')">Open Door</button>
+      <button class="action-btn" onclick="feederAction('/door-close','Close Door')">Close Door</button>
+    </div>
   </div>
 
   <div class="panel" id="battery-panel" data-title="[ BATTERY ]" data-deck="core">
@@ -970,7 +1037,7 @@ async function fetchData() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const d = await resp.json();
     updateHeader(d);
-    updateServices(d.services || {});
+    updateServices(d);
     updateBattery(d.battery || {});
     updateWifi(d.wifi || {});
     updatePC(d.pc_stats || {});
@@ -994,21 +1061,157 @@ function updateHeader(d) {
     : '0 0 6px var(--danger), 0 0 12px var(--danger)';
 }
 
-function updateServices(svcs) {
-  const order = ['sshd','cloudflared','ntfy','webhook','hermes','battery_alert','ferran_alert','forza','feeder'];
-  const labels = { sshd:'SSH', cloudflared:'CF Tunnel', ntfy:'ntfy',
+// Services whose Stop button can strand this panel remotely — cloudflared
+// carries the tunnel restart.prayas.space depends on, webhook is the process
+// serving this very request. Both get a confirm() speed bump, not a block.
+const SVC_STOP_CONFIRM = new Set(['cloudflared', 'webhook']);
+const svcBusy = new Set();
+const alertBusySet = new Set();
+
+function updateServices(d) {
+  const svcs = d.services || {};
+  const meta = d.service_meta;
+  const FALLBACK_ORDER = ['sshd','cloudflared','ntfy','webhook','hermes','battery_alert','ferran_alert','forza','feeder'];
+  const FALLBACK_LABELS = { sshd:'SSH', cloudflared:'CF Tunnel', ntfy:'ntfy',
     webhook:'Webhook', hermes:'Hermes', battery_alert:'Battery Alert', ferran_alert:'Ferran Alert',
     forza:'Forza', feeder:'Feeder' };
+  const order  = (meta && meta.length) ? meta.map(m => m.key) : FALLBACK_ORDER;
+  const labels = (meta && meta.length)
+    ? Object.fromEntries(meta.map(m => [m.key, m.label]))
+    : FALLBACK_LABELS;
+
+  const alertState = {};
+  if (meta && meta.length) {
+    for (const m of meta) alertState[m.key] = m.alert !== false;
+  }
+
   let html = '';
   for (const key of order) {
     const status = svcs[key];
+    if (status === undefined) continue;
     const up = status === 'running' || status === 'online';
-    html += `<div class="svc-row">
+    const busy = svcBusy.has(key);
+    const alertOn = key in alertState ? alertState[key] : true;
+    const alertBusy = alertBusySet.has(key);
+    html += `<div class="svc-row" data-svc="${key}">
       <span class="svc-dot ${up ? 'up' : 'down'}"></span>
       <span class="svc-name ${up ? '' : 'down-svc'}">${labels[key] || key}</span>
+      <button class="svc-btn ${up ? 'stop' : ''} ${busy ? 'busy' : ''}"
+        onclick="serviceAction('${key}', ${up})">${busy ? '...' : (up ? 'Stop' : 'Start')}</button>
+      <button class="svc-btn ${alertOn ? '' : 'muted'} ${alertBusy ? 'busy' : ''}"
+        title="${alertOn ? 'Alerts on — click to mute' : 'Alerts muted — click to unmute'}"
+        onclick="toggleAlert('${key}', ${alertOn})">${alertBusy ? '...' : (alertOn ? 'Mute' : 'Unmute')}</button>
     </div>`;
   }
   document.getElementById('services-grid').innerHTML = html;
+}
+
+async function serviceAction(key, currentlyUp) {
+  if (svcBusy.has(key)) return;
+  if (currentlyUp && SVC_STOP_CONFIRM.has(key)) {
+    const ok = confirm(`Stopping ${key} may disconnect this panel remotely — you'd need physical/SSH access to bring it back. Continue?`);
+    if (!ok) return;
+  }
+  svcBusy.add(key);
+  const endpoint = currentlyUp ? '/stop' : '/restart';
+  const row = document.querySelector(`.svc-row[data-svc="${key}"] .svc-btn`);
+  if (row) { row.classList.add('busy'); row.textContent = '...'; }
+  try {
+    const resp = await fetch(apiUrl(endpoint, { service: key }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.error) throw new Error(d.error || 'failed');
+  } catch (e) {
+    if (row) row.classList.add('err');
+  } finally {
+    svcBusy.delete(key);
+    setTimeout(fetchData, 1000);
+  }
+}
+
+async function toggleAlert(key, currentlyOn) {
+  if (alertBusySet.has(key)) return;
+  alertBusySet.add(key);
+  const btn = document.querySelector(`.svc-row[data-svc="${key}"] .svc-btn:last-child`);
+  if (btn) { btn.classList.add('busy'); btn.textContent = '...'; }
+  try {
+    const resp = await fetch(apiUrl('/service/alert', { service: key, enabled: !currentlyOn }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.error) throw new Error(d.error || 'failed');
+  } catch (e) {
+    if (btn) btn.classList.add('err');
+  } finally {
+    alertBusySet.delete(key);
+    setTimeout(fetchData, 500);
+  }
+}
+
+// ── QUICK ACTIONS ──
+let actionsCache = [];
+const actionBusy = new Set();
+
+async function fetchActions() {
+  try {
+    const resp = await fetch(apiUrl('/actions/list'));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    actionsCache = await resp.json();
+    renderActions();
+  } catch (e) {
+    document.getElementById('actions-grid').innerHTML =
+      '<span style="color:var(--danger);font-size:11px">Actions unavailable</span>';
+  }
+}
+
+function renderActions() {
+  document.getElementById('actions-grid').innerHTML = actionsCache.map(a => `
+    <button class="action-btn" data-action="${a.key}"
+      onclick="runAction('${a.key}', ${!!a.confirm}, '${(a.label || a.key).replace(/'/g, "\\'")}')">
+      ${a.label || a.key}
+    </button>`).join('');
+}
+
+async function runAction(key, needsConfirm, label) {
+  if (actionBusy.has(key)) return;
+  if (needsConfirm) {
+    const ok = confirm(`Run "${label}"? This may briefly interrupt the panel.`);
+    if (!ok) return;
+  }
+  actionBusy.add(key);
+  const btn = document.querySelector(`.action-btn[data-action="${key}"]`);
+  const original = btn ? btn.textContent : label;
+  if (btn) { btn.classList.add('busy'); btn.textContent = 'Running...'; }
+  try {
+    const resp = await fetch(apiUrl('/action/run', { action: key }), { method: 'POST' });
+    const d = await resp.json();
+    if (!resp.ok || d.error) throw new Error(d.error || 'failed');
+    if (btn) { btn.classList.add('ok'); btn.textContent = 'Done'; }
+  } catch (e) {
+    if (btn) { btn.classList.add('err'); btn.textContent = 'Failed'; }
+  } finally {
+    actionBusy.delete(key);
+    setTimeout(() => {
+      if (btn) { btn.classList.remove('busy', 'ok', 'err'); btn.textContent = original; }
+    }, 3000);
+  }
+}
+
+// ── CAT FEEDER ──
+async function feederAction(endpoint, label) {
+  const btns = document.querySelectorAll('#feeder-grid .action-btn');
+  btns.forEach(b => b.classList.add('busy'));
+  const btn = [...btns].find(b => b.textContent.trim() === label);
+  try {
+    const resp = await fetch(apiUrl(endpoint), { method: 'GET' });
+    const d = await resp.json();
+    if (!resp.ok || d.status === 'error') throw new Error(d.message || 'failed');
+    if (btn) { btn.classList.add('ok'); btn.textContent = 'OK'; }
+  } catch (e) {
+    if (btn) { btn.classList.add('err'); btn.textContent = 'Failed'; }
+  } finally {
+    setTimeout(() => {
+      btns.forEach(b => b.classList.remove('busy', 'ok', 'err'));
+      if (btn) btn.textContent = label;
+    }, 2500);
+  }
 }
 
 function updateBattery(b) {
@@ -1409,6 +1612,9 @@ setInterval(fetchDeck, 8000);
 // Same cadence as the deck — both round-trip to the PC agent
 fetchAudio();
 setInterval(fetchAudio, 8000);
+
+// Quick actions are static per session (edit actions.json + reload to pick up changes)
+fetchActions();
 
 // Fire up telemetry listeners last
 initForzaWebSocket();

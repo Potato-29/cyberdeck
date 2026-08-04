@@ -72,6 +72,7 @@ from service_registry import (  # noqa: E402
     load_registry,
     restart_service,
     service_meta_list,
+    set_alert,
     status_dict,
     stop_service,
 )
@@ -398,6 +399,28 @@ def status():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify(status_dict()), 200
+
+
+@app.route("/service/alert", methods=["POST"])
+def service_alert():
+    """Enable/disable status_checker alerting for one service, without
+    touching whether it's monitored/restartable — just whether a down
+    reading pages you. Writes the change straight into services.json."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    service = request.args.get("service")
+    enabled_raw = request.args.get("enabled")
+    registry = load_registry()
+    svc = find_service(service, registry) if service else None
+    if svc is None:
+        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
+    if enabled_raw not in ("true", "false"):
+        return jsonify({"error": "enabled must be 'true' or 'false'"}), 400
+
+    enabled = enabled_raw == "true"
+    set_alert(svc.key, enabled)
+    return jsonify({"status": f"{svc.key} alert {'enabled' if enabled else 'disabled'}"}), 200
 
 
 @app.route("/actions/list", methods=["GET"])
