@@ -350,19 +350,48 @@ keys, each holding that question's answer as newline-separated "- " bullet point
     return render({k: str(sections.get(k, "")) for k, _, _ in SECTIONS})
 
 
+def _load_draft_cache():
+    """Drafts keyed by ISO week ("2026-W05"), so past weeks survive the rollover."""
+    if not CACHE_FILE.is_file():
+        return {}
+    try:
+        data = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+    if "week" in data:  # migrate the old single-draft cache format
+        return {data["week"]: data}
+    return data
+
+
+def _save_draft_cache(cache):
+    try:
+        CACHE_FILE.write_text(json.dumps(cache), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def build_draft(refresh=False):
-    """Draft for the current week, cached so re-opening the page is free."""
+    """Draft for the current week, cached so re-opening the page is free.
+
+    A fresh week starts with zero entries, so opening the page right after the
+    week rolls over (e.g. the weekend after Friday's push) must not blow away
+    the last completed week's draft with an empty one - fall back to the most
+    recently cached week until this one actually has notes in it.
+    """
     start = week_start()
     key = start.strftime("%G-W%V")
-    if not refresh and CACHE_FILE.is_file():
-        try:
-            cached = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
-            if cached.get("week") == key:
-                return cached
-        except (ValueError, OSError):
-            pass
+    cache = _load_draft_cache()
+
+    if not refresh and key in cache:
+        return cache[key]
 
     entries = read_entries(since=start)
+
+    if not refresh and not entries and cache:
+        latest_key = max(cache)
+        if latest_key != key:
+            return cache[latest_key]
+
     text = generate_with_groq(entries)
     result = {
         "week": key,
@@ -372,10 +401,8 @@ def build_draft(refresh=False):
         "generated_at": _now().isoformat(timespec="seconds"),
         "text": text or generate_fallback(entries),
     }
-    try:
-        CACHE_FILE.write_text(json.dumps(result), encoding="utf-8")
-    except OSError:
-        pass
+    cache[key] = result
+    _save_draft_cache(cache)
     return result
 
 

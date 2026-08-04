@@ -120,6 +120,11 @@ Generated once per ISO week and cached in `standup-weekly-cache.json` next to th
 log, so reopening the page doesn't burn a request. `[REGENERATE]` (or `?refresh=1`)
 forces a new pass — useful after logging something on Friday afternoon.
 
+The cache keeps every past week, not just the latest. If you open the page after
+the week has rolled over and haven't logged anything yet in the new week, it keeps
+showing last week's Friday draft instead of a blank one — the first note you log
+in the new week is what makes it switch over.
+
 The generator is told to ground every answer in your notes and to say a section is
 thin rather than pad it, so an empty week produces an honestly empty draft. Read it
 before pasting; it is a first draft, not a submission.

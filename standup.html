@@ -5,41 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>STANDUP LOG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:       #050a06;
-    --surface:  #0a120c;
-    --border:   #1a3a1a;
-    --accent:   #15ff00;
-    --accent-dim:#0a6b00;
-    --text:     #b8ffb8;
-    --dim:      #3a6a3a;
+    --bg:       #060a10;
+    --surface:  #0c131c;
+    --border:   rgba(232,238,244,0.16);
+    --border-bright: #e8eef4;
+    --accent:   #1fe0ff;
+    --accent-dim: rgba(31,224,255,0.35);
+    --text:     #e8eef4;
+    --dim:      #5a6a7c;
     --warn:     #ffb000;
-    --danger:   #ff3333;
-    --blue:     #00ccff;
+    --danger:   #ff3b4e;
+    --blue:     #1fe0ff;
+    --violet:   #b98bff;
+    --pink:     #ff7ecb;
+    --header-h: 44px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    background: var(--bg);
+    background:
+      linear-gradient(rgba(31,224,255,0.03) 1px, transparent 1px) 0 0 / 100% 28px,
+      var(--bg);
     color: var(--text);
-    font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+    font-family: 'Chakra Petch', 'Share Tech Mono', sans-serif;
     min-height: 100vh;
     padding-bottom: 40px;
     -webkit-text-size-adjust: 100%;
   }
 
+  /* ── SCANLINES ── */
   body::after {
     content: '';
     position: fixed;
     inset: 0;
     background: repeating-linear-gradient(
       0deg, transparent, transparent 2px,
-      rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+      rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
     pointer-events: none;
     z-index: 9999;
+  }
+  .scanline-flicker {
+    position: fixed;
+    inset: 0;
+    background: rgba(31,224,255,0.02);
+    pointer-events: none;
+    z-index: 9998;
+    animation: flicker 8s infinite;
+  }
+  @keyframes flicker {
+    0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% { opacity: 0; }
+    20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.05; }
   }
 
   /* ── HEADER ── */
@@ -47,27 +66,42 @@
     position: sticky;
     top: 0;
     z-index: 100;
+    height: var(--header-h);
     background: var(--surface);
-    border-bottom: 2px solid var(--accent-dim);
-    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    padding: 0 14px;
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 2px 16px rgba(21,255,0,0.08);
+    box-shadow: 0 1px 0 var(--accent-dim);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent-dim);
+    flex-shrink: 0;
   }
   .logo {
     font-size: 14px;
+    font-weight: 600;
     letter-spacing: 3px;
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent), 0 0 30px var(--accent-dim);
+    color: var(--text);
     text-transform: uppercase;
   }
   .logo::after {
-    content: '█';
+    content: '_';
     animation: blink 1s infinite;
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--accent);
   }
   @keyframes blink { 0%,49% { opacity:1 } 50%,100% { opacity:0 } }
-  .week-label { margin-left: auto; font-size: 11px; color: var(--dim); }
+  .week-label {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+  }
 
   /* ── TABS ── */
   #tabs {
@@ -79,17 +113,19 @@
     flex: 1;
     text-align: center;
     padding: 10px 6px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
     letter-spacing: 2px;
     color: var(--dim);
     cursor: pointer;
     border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
     user-select: none;
   }
   .tab.active {
     color: var(--accent);
     border-bottom-color: var(--accent);
-    text-shadow: 0 0 8px var(--accent-dim);
+    background: rgba(31,224,255,0.06);
   }
 
   main { padding: 14px; max-width: 720px; margin: 0 auto; }
@@ -100,15 +136,38 @@
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 12px;
+    clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+    padding: 14px;
     margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
-  .panel-title {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--accent);
+  .panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 14px; height: 14px;
+    border-top: 1px solid var(--accent);
+    border-left: 1px solid var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .panel:hover::after { opacity: 0.9; }
+  .panel::before {
+    content: attr(data-title);
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
     margin-bottom: 10px;
-    text-shadow: 0 0 8px var(--accent-dim);
+    padding-bottom: 8px;
+    padding-left: 10px;
+    border-bottom: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
   }
 
   /* ── FORM ── */
@@ -126,7 +185,7 @@
   textarea:focus {
     outline: none;
     border-color: var(--accent-dim);
-    box-shadow: 0 0 10px rgba(21,255,0,0.12);
+    box-shadow: 0 0 10px rgba(31,224,255,0.12);
   }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
   .chip {
@@ -137,6 +196,7 @@
     letter-spacing: 1px;
     cursor: pointer;
     user-select: none;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
   .chip.active {
     color: var(--bg);
@@ -146,18 +206,22 @@
   }
   button {
     width: 100%;
-    background: transparent;
-    border: 1px solid var(--accent-dim);
-    color: var(--accent);
-    font-family: inherit;
-    font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 2px;
     padding: 12px;
     cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
-  button:active { background: var(--accent-dim); color: var(--bg); }
-  button:disabled { opacity: 0.4; cursor: default; }
+  button:hover   { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(31,224,255,0.15); }
+  button:active  { background: var(--accent); color: var(--bg); border-color: var(--accent); box-shadow: none; }
+  button:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
   button.ghost { border-color: var(--border); color: var(--dim); }
+  button.ghost:hover { border-color: var(--border-bright); color: var(--text); box-shadow: none; }
 
   .row { display: flex; gap: 8px; }
   .row button { flex: 1; }
@@ -175,7 +239,7 @@
     gap: 8px;
     align-items: flex-start;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(26,58,26,0.4);
+    border-bottom: 1px solid rgba(232,238,244,0.08);
     font-size: 14px;
     line-height: 1.45;
   }
@@ -189,10 +253,10 @@
     margin-top: 2px;
   }
   .tag-progress { color: var(--accent) !important; border-color: var(--accent-dim) !important; }
-  .tag-ai       { color: var(--blue) !important;   border-color: #005f7a !important; }
-  .tag-gap      { color: var(--warn) !important;   border-color: #6b4a00 !important; }
-  .tag-values   { color: #ff8ad8 !important;       border-color: #6b2a55 !important; }
-  .tag-next     { color: #c48aff !important;       border-color: #4a2a6b !important; }
+  .tag-ai       { color: #00ccff !important;       border-color: rgba(0,204,255,0.35) !important; }
+  .tag-gap      { color: var(--warn) !important;   border-color: rgba(255,176,0,0.35) !important; }
+  .tag-values   { color: var(--pink) !important;   border-color: rgba(255,126,203,0.35) !important; }
+  .tag-next     { color: var(--violet) !important; border-color: rgba(185,139,255,0.35) !important; }
   .entry .txt { flex: 1; word-break: break-word; }
   .entry .del {
     flex: none;
@@ -233,7 +297,7 @@
     letter-spacing: 1px;
     z-index: 500;
     transition: transform 0.25s ease;
-    box-shadow: 0 0 20px rgba(21,255,0,0.15);
+    box-shadow: 0 0 20px rgba(31,224,255,0.15);
     max-width: 90vw;
     text-align: center;
   }
@@ -243,7 +307,10 @@
 </head>
 <body>
 
+<div class="scanline-flicker"></div>
+
 <div id="header">
+  <div class="status-dot"></div>
   <span class="logo">STANDUP LOG</span>
   <span class="week-label" id="week-label">--</span>
 </div>
@@ -256,8 +323,7 @@
 <main>
   <!-- ── LOG VIEW ── -->
   <section class="view active" id="view-log">
-    <div class="panel">
-      <div class="panel-title">[ WHAT DID YOU DO? ]</div>
+    <div class="panel" data-title="[ WHAT DID YOU DO? ]">
       <textarea id="note" placeholder="shipped the deck agent, fixed the hardcoded IPs..."
                 autocomplete="off"></textarea>
       <div class="chips" id="chips">
@@ -270,16 +336,14 @@
       <button id="save-btn">[ SAVE ENTRY ]</button>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">[ THIS WEEK ]</div>
+    <div class="panel" data-title="[ THIS WEEK ]">
       <div id="entries"><div class="empty">loading...</div></div>
     </div>
   </section>
 
   <!-- ── WEEKLY VIEW ── -->
   <section class="view" id="view-weekly">
-    <div class="panel">
-      <div class="panel-title">[ WEEKLY UPDATE ]</div>
+    <div class="panel" data-title="[ WEEKLY UPDATE ]">
       <div class="meta" id="draft-meta">not generated yet</div>
       <div id="draft-text">Tap REGENERATE to build this week's draft.</div>
       <div class="row" style="margin-top:12px">
