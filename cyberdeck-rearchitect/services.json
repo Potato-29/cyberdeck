@@ -1,0 +1,59 @@
+[
+  { "key": "sshd", "label": "SSH", "category": "termux",
+    "check": { "mechanism": "pgrep", "value": "-x sshd" },
+    "start": "sshd", "stop": "pkill -x sshd", "tmux_session": null,
+    "alert": true, "boot": true },
+
+  { "key": "crond", "label": "Cron", "category": "termux",
+    "check": { "mechanism": "pgrep", "value": "-x crond" },
+    "start": "crond", "stop": "pkill -x crond", "tmux_session": null,
+    "alert": true, "boot": true },
+
+  { "key": "cloudflared", "label": "CF Tunnel", "category": "termux",
+    "check": { "mechanism": "shell",
+      "value": "ls /proc/*/exe 2>/dev/null | xargs -I{} readlink {} 2>/dev/null | grep -q cloudflared" },
+    "start": "tmux new-session -d -s cloudflare 'cloudflared tunnel run my-phone'",
+    "stop": "tmux kill-session -t cloudflare",
+    "tmux_session": "cloudflare", "alert": true, "boot": true },
+
+  { "key": "ntfy", "label": "ntfy", "category": "proot",
+    "check": { "mechanism": "pgrep", "value": "-f '[n]tfy serve'" },
+    "start": "tmux new-session -d -s ntfy 'proot-distro login ubuntu -- ntfy serve'",
+    "stop": "tmux kill-session -t ntfy",
+    "tmux_session": "ntfy", "alert": true, "boot": true },
+
+  { "key": "hermes", "label": "Hermes", "category": "proot",
+    "check": { "mechanism": "tmux", "value": "hermes" },
+    "start": "tmux new-session -d -s hermes 'proot-distro login ubuntu -- bash -c \"hermes gateway run\"'",
+    "stop": "tmux kill-session -t hermes",
+    "tmux_session": "hermes", "alert": true, "boot": true },
+
+  { "key": "battery_alert", "label": "Battery Alert", "category": "termux",
+    "check": { "mechanism": "tmux", "value": "battery" },
+    "start": "tmux new-session -d -s battery 'bash ~/cyberdeck/battery_alert.sh'",
+    "stop": "tmux kill-session -t battery",
+    "tmux_session": "battery", "alert": false, "boot": false },
+
+  { "key": "webhook", "label": "Webhook", "category": "termux",
+    "check": { "mechanism": "tmux", "value": "webhook" },
+    "start": "tmux new-session -d -s webhook 'python3 ~/cyberdeck/webhook_new.py'",
+    "stop": "tmux kill-session -t webhook",
+    "tmux_session": "webhook", "alert": true, "boot": true },
+
+  { "key": "forza", "label": "Forza", "category": "termux",
+    "check": { "mechanism": "tmux", "value": "forza" },
+    "start": "tmux new-session -d -s forza 'cd cyberdeck/forza && python3 forza_listener.py'",
+    "stop": "tmux kill-session -t forza",
+    "tmux_session": "forza", "alert": true, "boot": true },
+
+  { "key": "ferran_alert", "label": "Ferran Alert", "category": "termux",
+    "check": { "mechanism": "tmux", "value": "ferran-alert" },
+    "start": "tmux new-session -d -s ferran-alert 'node ~/cyberdeck/ferran_alert.mjs'",
+    "stop": "tmux kill-session -t ferran-alert",
+    "tmux_session": "ferran-alert", "alert": true, "boot": true },
+
+  { "key": "feeder", "label": "Feeder", "category": "esp32",
+    "check": { "mechanism": "http", "value": "http://{ESP32_IP}/status?token={ESP32_API_TOKEN}" },
+    "start": null, "stop": null, "tmux_session": null,
+    "alert": true, "boot": false }
+]
