@@ -19,6 +19,7 @@ The table below is a human-readable summary; `services.json` is authoritative if
 | hermes | proot | `hermes` | yes | yes |
 | battery_alert | Termux | `battery` | **no — disabled** | no |
 | webhook | Termux | `webhook` | yes | yes |
+| ideas | Termux | `ideas` | yes | yes |
 | forza | Termux | `forza` | yes | yes |
 | ferran_alert | Termux | `ferran-alert` | yes | yes |
 | feeder (ESP32) | remote hardware | n/a | n/a | yes |
@@ -32,6 +33,7 @@ The table below is a human-readable summary; `services.json` is authoritative if
 - **hermes** — Gateway inside proot Ubuntu (`hermes gateway run`). Successor to the retired `picoclaw`.
 - **battery_alert** — Checks battery every 5 minutes; TTS and Android notification when low (&lt;20%) or full (&gt;90%). Currently **disabled** — not started at boot and not alerted on, but still start/stop-able manually from the dashboard control panel.
 - **webhook** (`webhook_new.py`) — Flask on port **2122**. Restart/stop commands, status, dashboard data, quick actions, standup routes, ESP32 feed endpoints.
+- **ideas** (`ideas/server.py`) — Idea board on port **2124**, served at `ideas.prayas.space`. The only service with its own user accounts and a database (`~/ideas.db`); it does not use `WEBHOOK_TOKEN`. See [Idea board](ideas.md).
 - **forza** (`forza_listener.py`) — FH6 telemetry server (HTTP + WebSocket on port 8000, UDP listener on 5300) feeding the dashboard's Forza panel.
 - **ferran_alert** (`ferran_alert.mjs`) — Ferran Torres shot-alert poller.
 - **feeder** — ESP32 cat feeder. Checked over HTTP; can't be restarted remotely (it's separate hardware), but `/feed`, `/door-open`, `/door-close` are exposed as dashboard control-panel buttons.

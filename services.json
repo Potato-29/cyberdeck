@@ -99,6 +99,21 @@
     "boot": true
   },
   {
+    "key": "ideas",
+    "label": "Ideas",
+    "category": "termux",
+    "_note": "Idea board on port 2124, served at ideas.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/ideas.db — it does not use WEBHOOK_TOKEN. See docs/ideas.md.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "ideas"
+    },
+    "start": "tmux new-session -d -s ideas 'python3 ~/cyberdeck/ideas/server.py'",
+    "stop": "tmux kill-session -t ideas",
+    "tmux_session": "ideas",
+    "alert": true,
+    "boot": true
+  },
+  {
     "key": "forza",
     "label": "Forza",
     "category": "termux",

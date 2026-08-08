@@ -1,0 +1,119 @@
+/* Design tokens.
+ *
+ * Deliberately unrelated to the cyberdeck HUD: no scanlines, no neon, no
+ * notched panels. This is a place to sit with half-formed thoughts, so it
+ * aims for calm — hairlines and whitespace instead of boxes and borders.
+ *
+ * Themes resolve in three steps: light defaults, a prefers-color-scheme
+ * override, then an explicit [data-theme] that must win over both.
+ */
+
+:root {
+  --bg: #fcfcfc;
+  --surface: #ffffff;
+  --surface-sunk: #f4f4f5;
+  --text: #1a1a1c;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --accent: #5b5bd6;
+  --accent-soft: rgba(91, 91, 214, 0.1);
+  --danger: #dc2626;
+
+  --status-spark: #d97706;
+  --status-brewing: #2563eb;
+  --status-building: #059669;
+  --status-shipped: #52525b;
+  --status-parked: #a1a1aa;
+  --status-dropped: #a1a1aa;
+
+  --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.09), 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Newsreader', ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* 4px scale */
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+  --s8: 4rem;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --measure: 720px;
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --dur: 150ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0e10;
+    --surface: #17171a;
+    --surface-sunk: #202024;
+    --text: #ececee;
+    --text-muted: #8b8b93;
+    --text-faint: #6a6a72;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --accent: #7b7be8;
+    --accent-soft: rgba(123, 123, 232, 0.16);
+    --danger: #f87171;
+
+    --status-spark: #f59e0b;
+    --status-brewing: #60a5fa;
+    --status-building: #34d399;
+    --status-shipped: #a1a1aa;
+    --status-parked: #6a6a72;
+    --status-dropped: #6a6a72;
+
+    --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Explicit choice beats the system preference in both directions. */
+:root[data-theme='light'] {
+  --bg: #fcfcfc;
+  --surface: #ffffff;
+  --surface-sunk: #f4f4f5;
+  --text: #1a1a1c;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --accent: #5b5bd6;
+  --accent-soft: rgba(91, 91, 214, 0.1);
+  --danger: #dc2626;
+  --status-spark: #d97706;
+  --status-brewing: #2563eb;
+  --status-building: #059669;
+  --status-shipped: #52525b;
+  --status-parked: #a1a1aa;
+  --status-dropped: #a1a1aa;
+  --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.09), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e0e10;
+  --surface: #17171a;
+  --surface-sunk: #202024;
+  --text: #ececee;
+  --text-muted: #8b8b93;
+  --text-faint: #6a6a72;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --accent: #7b7be8;
+  --accent-soft: rgba(123, 123, 232, 0.16);
+  --danger: #f87171;
+  --status-spark: #f59e0b;
+  --status-brewing: #60a5fa;
+  --status-building: #34d399;
+  --status-shipped: #a1a1aa;
+  --status-parked: #6a6a72;
+  --status-dropped: #6a6a72;
+  --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+}

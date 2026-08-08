@@ -15,6 +15,7 @@ The Cyberdeck is a rooted Android phone permanently stationed at your desk. It r
 | Tunnel config and new subdomains | [Cloudflare tunnel](cloudflare-tunnel.md) |
 | PC app launcher tiles | [Deck shortcuts](deck-shortcuts.md) |
 | Daily work log and Friday update | [Weekly standup](standup.md) |
+| Idea board, accounts, backups | [Idea board](ideas.md) |
 | tmux, ntfy, webhook, Cloudflare CLI | [Commands](commands.md) |
 | Troubleshooting | [Debugging](debugging.md) |
 
@@ -36,6 +37,7 @@ These files mirror what typically lives under `~` on the device. They load secre
 | `standup.py` + `standup.html` | Daily work log, Friday update generator (blueprint on 2122) |
 | `note.ps1` | **Runs on the PC** — log a standup note from the terminal |
 | `test-standup.sh` | Non-destructive smoke test for the standup endpoints |
+| `ideas/` | Idea board — own accounts, SQLite, React build (port 2124) |
 | `sketch_may1a/` | ESP32 cat feeder firmware |
 
 Copy `.env.example` to `.env` and fill in values before deploying.

@@ -17,8 +17,13 @@ ingress:
     service: http://localhost:2121
   - hostname: restart.prayas.space
     service: http://localhost:2122
+  - hostname: ideas.prayas.space
+    service: http://localhost:2124
   - service: http_status:404
 ```
+
+Rules match top to bottom, so every hostname must come **above** the
+`http_status:404` catch-all.
 
 ## Adding a new subdomain
 
