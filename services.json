@@ -122,7 +122,7 @@
       "mechanism": "tmux",
       "value": "crumbs"
     },
-    "start": "tmux new-session -d -s crumbs 'proot-distro login ubuntu -- bash -c \"cd crumbs && node build\"",
+    "start": "tmux new-session -d -s crumbs 'proot-distro login ubuntu -- bash -c \"cd crumbs && node build\"'",
     "stop": "tmux kill-session -t crumbs",
     "tmux_session": "crumbs",
     "alert": true,
