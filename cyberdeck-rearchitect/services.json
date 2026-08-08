@@ -10,8 +10,8 @@
     "alert": true, "boot": true },
 
   { "key": "cloudflared", "label": "CF Tunnel", "category": "termux",
-    "check": { "mechanism": "shell",
-      "value": "ls /proc/*/exe 2>/dev/null | xargs -I{} readlink {} 2>/dev/null | grep -q cloudflared" },
+    "_note": "Checked via tmux, not pgrep/proc: Android's /proc hides other processes, so reading /proc/*/exe finds nothing and the tunnel reads as down while it is fine. Session is 'cloudflare', process is 'cloudflared'.",
+    "check": { "mechanism": "tmux", "value": "cloudflare" },
     "start": "tmux new-session -d -s cloudflare 'cloudflared tunnel run my-phone'",
     "stop": "tmux kill-session -t cloudflare",
     "tmux_session": "cloudflare", "alert": true, "boot": true },
