@@ -64,7 +64,7 @@ GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_BASE = os.environ.get("GROQ_BASE", "https://api.groq.com/openai/v1")
 STT_MODEL = os.environ.get("BUDDY_STT_MODEL", "whisper-large-v3-turbo")
 LLM_MODEL = os.environ.get("BUDDY_LLM_MODEL", "llama-3.3-70b-versatile")
-TTS_MODEL = os.environ.get("BUDDY_TTS_MODEL", "playai-tts")
+TTS_MODEL = os.environ.get("BUDDY_TTS_MODEL", "canopylabs/orpheus-v1-english")
 TTS_VOICE = os.environ.get("BUDDY_TTS_VOICE", "Fritz-PlayAI")
 SYSTEM_PROMPT = os.environ.get(
     "BUDDY_SYSTEM_PROMPT",
