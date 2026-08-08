@@ -114,6 +114,21 @@
     "boot": true
   },
   {
+    "key": "crumbs",
+    "label": "Crumbs",
+    "category": "termux",
+    "_note": "Crumb Notes on port 2126, served at crumbs.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/crumbs.db — it does not use WEBHOOK_TOKEN. See docs/crumbs.md.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "crumbs"
+    },
+    "start": "tmux new-session -d -s crumbs 'proot-distro login ubuntu -- bash -c \"cd crumbs && node build\"",
+    "stop": "tmux kill-session -t crumbs",
+    "tmux_session": "crumbs",
+    "alert": true,
+    "boot": true
+  },
+  {
     "key": "forza",
     "label": "Forza",
     "category": "termux",
