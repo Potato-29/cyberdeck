@@ -25,6 +25,7 @@ The most collision-prone thing in the repo. Check here before picking one.
 | 2122 | `webhook_new.py` — the hub | phone |
 | 2123 | `standup.py` standalone (testing only) | phone |
 | 2124 | `ideas/server.py` | phone |
+| 2125 | `deskbuddy/broker.py` — voice assistant broker (proot) | phone |
 | 8000 | `forza/forza_listener.py` (UDP 5300 in) | phone |
 | 8085 | LibreHardwareMonitor telemetry | **PC** |
 | 8086 | `pc-deck-agent.py` app launcher | **PC** |
@@ -48,6 +49,9 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
 - **`forza/`** — standalone aiohttp service (HTTP + WebSocket) for the Forza telemetry HUD.
 - **`ideas/`** — standalone idea board. **The exception to most rules below.**
 - **`sketch_may1a/`** — ESP32 Arduino firmware for the cat feeder.
+- **`deskbuddy/`** — "hey jarvis" voice assistant. ESP32 firmware (INMP441 mic +
+  SSD1306 eyes) streams audio to a Groq broker (`broker.py`, aiohttp on 2125, in
+  proot) that runs the wake word + STT/LLM/TTS. See [docs/deskbuddy.md](docs/deskbuddy.md).
 - **`pc-deck-agent.py`, `pc-telemetry-monitor.py`, `note.ps1`** — run on the
   **Windows PC**, not the phone.
 - **`*.sh`** — cron/health scripts on the phone.

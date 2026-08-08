@@ -11,6 +11,7 @@ database; it does not use WEBHOOK_TOKEN. See ../CLAUDE.md.
     python3 server.py --dev      # allows http:// cookies for local dev
 """
 
+import json
 import math
 import os
 import re
@@ -21,11 +22,11 @@ from pathlib import Path
 
 from flask import (
     Flask,
+    Response,
     g,
     jsonify,
     request,
     send_from_directory,
-    session,
 )
 
 
@@ -163,17 +164,27 @@ def idea_json(row, tags=None):
     }
 
 
+def _chunks(seq, size=400):
+    """SQLite caps host parameters per statement, and export is unbounded."""
+    for i in range(0, len(seq), size):
+        yield seq[i : i + size]
+
+
 def tags_for(idea_ids):
-    """One query for a whole page of ideas rather than N."""
+    """One query per chunk of ideas rather than one per idea."""
     if not idea_ids:
         return {}
-    marks = ",".join("?" * len(idea_ids))
-    rows = query(
-        f"SELECT it.idea_id, t.name FROM idea_tags it"
-        f" JOIN tags t ON t.id = it.tag_id"
-        f" WHERE it.idea_id IN ({marks}) ORDER BY t.name",
-        tuple(idea_ids),
-    )
+    rows = []
+    for chunk in _chunks(list(idea_ids)):
+        marks = ",".join("?" * len(chunk))
+        rows.extend(
+            query(
+                f"SELECT it.idea_id, t.name FROM idea_tags it"
+                f" JOIN tags t ON t.id = it.tag_id"
+                f" WHERE it.idea_id IN ({marks}) ORDER BY t.name",
+                tuple(chunk),
+            )
+        )
     out = {}
     for r in rows:
         out.setdefault(r["idea_id"], []).append(r["name"])
@@ -328,7 +339,8 @@ def list_ideas():
         sql.append("AND archived_at IS NULL")
 
     status = (request.args.get("status") or "").strip().lower()
-    if status in STATUSES:
+    has_status_filter = status in STATUSES
+    if has_status_filter:
         sql.append("AND status = ?")
         args.append(status)
 
@@ -348,7 +360,17 @@ def list_ideas():
         )
         args.extend([user["id"], tag])
 
-    sql.append("ORDER BY updated_at DESC LIMIT 500")
+    # "cold" is the point of the heat score: longest-untouched first, so ideas
+    # you've forgotten rise instead of sinking. Shipped and dropped ideas aren't
+    # neglected — resurfacing them is noise — so they're left out unless the
+    # caller explicitly asked for that status.
+    if (request.args.get("sort") or "").lower() == "cold":
+        if not has_status_filter:
+            sql.append("AND status NOT IN ('shipped', 'dropped')")
+        sql.append("ORDER BY updated_at ASC LIMIT 500")
+    else:
+        sql.append("ORDER BY updated_at DESC LIMIT 500")
+
     rows = query(" ".join(sql), tuple(args))
     tag_map = tags_for([r["id"] for r in rows])
     return jsonify({"ideas": [idea_json(r, tag_map.get(r["id"], [])) for r in rows]}), 200
@@ -511,6 +533,84 @@ def list_tags():
         (current_user()["id"],),
     )
     return jsonify({"tags": [{"name": r["name"], "count": r["n"]} for r in rows]}), 200
+
+
+def notes_for(idea_ids):
+    """Phase-1 boards have none, but export stays forward-compatible."""
+    if not idea_ids:
+        return {}
+    out = {}
+    for chunk in _chunks(list(idea_ids)):
+        marks = ",".join("?" * len(chunk))
+        for r in query(
+            f"SELECT idea_id, body, created_at FROM idea_notes"
+            f" WHERE idea_id IN ({marks}) ORDER BY created_at",
+            tuple(chunk),
+        ):
+            out.setdefault(r["idea_id"], []).append(
+                {"body": r["body"], "created_at": r["created_at"]}
+            )
+    return out
+
+
+def _markdown_export(rows, tag_map, notes_map, when):
+    out = [f"# Ideas\n", f"Exported {when} · {len(rows)} ideas\n"]
+    for r in rows:
+        out.append("\n---\n")
+        out.append(f"\n## {r['title']}\n")
+        meta = [r["status"]]
+        if tag_map.get(r["id"]):
+            meta.append(" ".join(f"#{t}" for t in tag_map[r["id"]]))
+        meta.append(f"created {r['created_at'][:10]}")
+        meta.append(f"updated {r['updated_at'][:10]}")
+        if r["archived_at"]:
+            meta.append("archived")
+        out.append(f"\n*{' · '.join(meta)}*\n")
+        if r["body"].strip():
+            out.append(f"\n{r['body'].rstrip()}\n")
+        for note in notes_map.get(r["id"], []):
+            out.append(f"\n> {note['created_at'][:10]} — {note['body']}\n")
+    return "".join(out)
+
+
+@app.get("/api/export")
+@login_required
+def export_ideas():
+    """Everything this user has, archived included. Never trap your own ideas."""
+    user = current_user()
+    rows = query(
+        "SELECT * FROM ideas WHERE user_id = ? ORDER BY created_at", (user["id"],)
+    )
+    ids = [r["id"] for r in rows]
+    tag_map = tags_for(ids)
+    notes_map = notes_for(ids)
+    when = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    if (request.args.get("format") or "json").lower() in ("md", "markdown"):
+        payload = _markdown_export(rows, tag_map, notes_map, when)
+        mimetype, ext = "text/markdown; charset=utf-8", "md"
+    else:
+        payload = json.dumps(
+            {
+                "exported_at": utcnow(),
+                "account": user["email"],
+                "count": len(rows),
+                "ideas": [
+                    {
+                        **idea_json(r, tag_map.get(r["id"], [])),
+                        "notes": notes_map.get(r["id"], []),
+                    }
+                    for r in rows
+                ],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        mimetype, ext = "application/json", "json"
+
+    resp = Response(payload, mimetype=mimetype)
+    resp.headers["Content-Disposition"] = f'attachment; filename="ideas-{when}.{ext}"'
+    return resp
 
 
 @app.post("/api/capture")

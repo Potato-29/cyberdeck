@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESK BUDDY</title>
+<style>
+  :root {
+    --bg: #05080a; --panel: #0a1015; --edge: #14323a;
+    --cyan: #35e0e0; --dim: #4a6b70; --amber: #ffb454; --red: #ff5062;
+    --text: #bfeef0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Courier New", ui-monospace, monospace;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px; gap: 20px; min-height: 100%;
+  }
+  /* scanline overlay — part of the cyberdeck HUD identity */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9;
+    background: repeating-linear-gradient(0deg,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px, rgba(0,0,0,0) 4px);
+  }
+  h1 {
+    font-size: 15px; letter-spacing: 6px; margin: 0; color: var(--cyan);
+    text-shadow: 0 0 12px rgba(53,224,224,0.5);
+  }
+  .wrap { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--edge);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    padding: 16px 18px;
+  }
+  .eyes { display: flex; justify-content: center; align-items: center; padding: 8px 0 14px; }
+  canvas { image-rendering: pixelated; width: 256px; height: 128px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; align-self: center;
+    padding: 6px 16px; border: 1px solid var(--edge); border-radius: 2px;
+    letter-spacing: 3px; font-size: 13px; text-transform: uppercase;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); }
+  .st-idle .dot { background: var(--dim); }
+  .st-listening .dot, .st-listening { color: var(--cyan); border-color: var(--cyan); }
+  .st-listening .dot { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .st-thinking .dot, .st-thinking { color: var(--amber); border-color: var(--amber); }
+  .st-thinking .dot { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+  .st-speaking .dot, .st-speaking { color: var(--cyan); border-color: var(--cyan); }
+  .st-speaking .dot { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .st-error .dot, .st-error { color: var(--red); border-color: var(--red); }
+  .st-error .dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+  .grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13px; }
+  .grid .k { color: var(--dim); letter-spacing: 1px; }
+  .grid .v { color: var(--text); word-break: break-word; }
+  .row { display: flex; gap: 8px; }
+  input {
+    flex: 1; background: #060b0d; border: 1px solid var(--edge); color: var(--text);
+    padding: 9px 11px; font-family: inherit; font-size: 13px; outline: none;
+  }
+  input:focus { border-color: var(--cyan); }
+  button {
+    background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
+    padding: 9px 18px; font-family: inherit; letter-spacing: 2px; cursor: pointer;
+    text-transform: uppercase; font-size: 12px;
+  }
+  button:hover { background: rgba(53,224,224,0.12); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hint { color: var(--dim); font-size: 11px; letter-spacing: 1px; margin-top: 8px; }
+  .link { color: var(--red); }
+</style>
+</head>
+<body>
+  <h1>◢ DESK BUDDY ◣</h1>
+  <div class="wrap">
+    <div class="panel">
+      <div class="eyes"><canvas id="eyes" width="128" height="64"></canvas></div>
+      <div class="pill st-idle" id="pill"><span class="dot"></span><span id="stateLabel">idle</span></div>
+    </div>
+
+    <div class="panel grid">
+      <div class="k">LINK</div><div class="v" id="link">connecting…</div>
+      <div class="k">WAKE</div><div class="v" id="wake">—</div>
+      <div class="k">LAST WAKE</div><div class="v" id="lastwake">—</div>
+      <div class="k">HEARD</div><div class="v" id="heard">—</div>
+      <div class="k">REPLY</div><div class="v" id="reply">—</div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <input id="say" placeholder="type a query to test the loop (no mic)…" autocomplete="off">
+        <button id="sayBtn">Say</button>
+      </div>
+      <div class="hint">Bypasses the mic + wake word: runs LLM → TTS → phone speaker,
+      and drives the eyes. Use it to verify Groq + audio before flashing the ESP32.</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const token = new URLSearchParams(location.search).get("token") || "";
+  const q = s => "?" + new URLSearchParams(s).toString();
+
+  // ── eyes canvas ──────────────────────────────────────────────
+  const cv = document.getElementById("eyes"), ctx = cv.getContext("2d");
+  let state = "idle", t0 = performance.now();
+
+  function eye(x, cy, w, h) {
+    const r = Math.min(8, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, cy - h / 2);
+    ctx.arcTo(x + w, cy - h / 2, x + w, cy + h / 2, r);
+    ctx.arcTo(x + w, cy + h / 2, x, cy + h / 2, r);
+    ctx.arcTo(x, cy + h / 2, x, cy - h / 2, r);
+    ctx.arcTo(x, cy - h / 2, x + w, cy - h / 2, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function draw(now) {
+    const t = (now - t0) / 1000;
+    ctx.fillStyle = "#05080a"; ctx.fillRect(0, 0, 128, 64);
+    let color = "#35e0e0";
+    if (state === "thinking") color = "#ffb454";
+    if (state === "error") color = "#ff5062";
+    ctx.fillStyle = color;
+    ctx.shadowColor = color; ctx.shadowBlur = 8;
+
+    const lx = 26, rx = 78, w = 24;
+    let cyL = 32, cyR = 32, h = 26;
+
+    if (state === "idle") {
+      const blink = (t % 3.2) > 3.0 ? 3 : 26;   // quick blink every ~3.2s
+      h = blink; cyL = cyR = 32 + Math.sin(t * 0.8) * 2;
+    } else if (state === "listening") {
+      h = 30 + Math.sin(t * 6) * 3;              // wide, alert, gentle pulse
+    } else if (state === "thinking") {
+      h = 20; cyL = cyR = 26 + Math.sin(t * 3) * 1;   // narrowed, looking up
+      // orbiting thought dot
+      ctx.beginPath();
+      ctx.arc(64 + Math.cos(t * 4) * 30, 30 + Math.sin(t * 4) * 10, 2.5, 0, 7);
+      ctx.fill();
+    } else if (state === "speaking") {
+      const b = Math.abs(Math.sin(t * 7));
+      h = 18 + b * 12; cyL = cyR = 32 - b * 2;   // rhythmic talk bob
+    } else if (state === "error") {
+      ctx.lineWidth = 4; ctx.strokeStyle = color;
+      for (const cx of [lx + w / 2, rx + w / 2]) {
+        ctx.beginPath();
+        ctx.moveTo(cx - 11, 21); ctx.lineTo(cx + 11, 43);
+        ctx.moveTo(cx + 11, 21); ctx.lineTo(cx - 11, 43);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0; requestAnimationFrame(draw); return;
+    }
+    eye(lx, cyL, w, h);
+    eye(rx, cyR, w, h);
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // ── state application ────────────────────────────────────────
+  const pill = document.getElementById("pill");
+  function setState(s) {
+    state = s;
+    document.getElementById("stateLabel").textContent = s;
+    pill.className = "pill st-" + s;
+  }
+
+  // ── websocket for live state ─────────────────────────────────
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => document.getElementById("link").textContent = "connected";
+    ws.onclose = () => {
+      document.getElementById("link").textContent = "disconnected — retrying…";
+      setTimeout(connect, 2000);
+    };
+    ws.onmessage = e => {
+      try { const d = JSON.parse(e.data); if (d.state) setState(d.state); } catch (_) {}
+    };
+  }
+  connect();
+
+  // ── poll /state for transcript/reply/meta ────────────────────
+  async function poll() {
+    try {
+      const r = await fetch("/state");
+      const d = await r.json();
+      document.getElementById("wake").textContent =
+        d.wake_enabled ? `"${d.wake_word}" (armed)` : `"${d.wake_word}" (disabled)`;
+      document.getElementById("lastwake").textContent =
+        d.last_wake ? new Date(d.last_wake * 1000).toLocaleTimeString() : "—";
+      document.getElementById("heard").textContent = d.last_transcript || "—";
+      document.getElementById("reply").textContent = d.last_reply || "—";
+    } catch (_) {}
+  }
+  poll(); setInterval(poll, 2000);
+
+  // ── test box ─────────────────────────────────────────────────
+  const say = document.getElementById("say"), btn = document.getElementById("sayBtn");
+  async function send() {
+    const text = say.value.trim(); if (!text) return;
+    btn.disabled = true;
+    try { await fetch("/say" + q({ text })); say.value = ""; } catch (_) {}
+    setTimeout(() => (btn.disabled = false), 600);
+  }
+  btn.onclick = send;
+  say.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+})();
+</script>
+</body>
+</html>

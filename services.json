@@ -128,6 +128,21 @@
     "boot": true
   },
   {
+    "key": "buddy",
+    "label": "Desk Buddy",
+    "category": "proot",
+    "_note": "Voice-assistant broker on port 2125. Runs INSIDE proot Ubuntu (glibc) because openWakeWord's ML runtime ships only glibc aarch64 wheels — Termux's bionic libc can't load them. Binds the Termux ~/cyberdeck into proot so it runs the same repo copy; PULSE_SERVER points at the Termux PulseAudio bridge for speaker playback. Checked via tmux, not pgrep — Android's /proc hides processes. See docs/deskbuddy.md.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "buddy"
+    },
+    "start": "tmux new-session -d -s buddy 'proot-distro login ubuntu --bind /data/data/com.termux/files/home/cyberdeck:/root/cyberdeck -- bash -c \"cd /root/cyberdeck/deskbuddy && PULSE_SERVER=tcp:127.0.0.1:4713 python3 broker.py\"'",
+    "stop": "tmux kill-session -t buddy",
+    "tmux_session": "buddy",
+    "alert": true,
+    "boot": true
+  },
+  {
     "key": "feeder",
     "label": "Feeder",
     "category": "esp32",

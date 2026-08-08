@@ -168,6 +168,8 @@ a {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  /* .btn is used on <a> too (downloads), so undo the global anchor styling. */
+  text-decoration: none;
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
     opacity var(--dur) var(--ease);
 }
@@ -400,6 +402,12 @@ a {
 
 .meta-sep {
   color: var(--text-faint);
+}
+
+/* Ideas that have gone untouched. Deliberately quiet — a nudge, not an alarm. */
+.cold-flag {
+  color: var(--status-spark);
+  opacity: 0.85;
 }
 
 .empty {

@@ -122,6 +122,10 @@ export const api = {
 
   tags: () => request<{ tags: Tag[] }>('/api/tags'),
 
+  // A plain link, not fetch+blob: the browser streams it straight to a file and
+  // the session cookie rides along on the GET.
+  exportUrl: (format: 'json' | 'md') => `/api/export?format=${format}`,
+
   publicIdea: (slug: string) =>
     request<{
       idea: {

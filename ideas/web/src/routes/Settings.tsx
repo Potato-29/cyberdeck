@@ -75,6 +75,24 @@ export function Settings() {
       <hr className="divider" />
 
       <h2 className="label" style={{ fontSize: 14 }}>
+        Export
+      </h2>
+      <p className="small muted" style={{ marginBottom: 'var(--s3)' }}>
+        Every idea you have, archived ones included. JSON round-trips everything;
+        markdown is for reading.
+      </p>
+      <div className="row">
+        <a className="btn" href={api.exportUrl('json')} download>
+          Download JSON
+        </a>
+        <a className="btn" href={api.exportUrl('md')} download>
+          Download Markdown
+        </a>
+      </div>
+
+      <hr className="divider" />
+
+      <h2 className="label" style={{ fontSize: 14 }}>
         Quick-capture token
       </h2>
       <p className="small muted" style={{ marginBottom: 'var(--s3)' }}>

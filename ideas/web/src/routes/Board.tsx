@@ -10,6 +10,7 @@ export function Board() {
   const status = params.get('status') ?? ''
   const tag = params.get('tag') ?? ''
   const archived = params.get('archived') === '1'
+  const sort = params.get('sort') === 'cold' ? 'cold' : 'recent'
 
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -39,6 +40,7 @@ export function Board() {
         status,
         tag,
         q: debounced,
+        sort,
         archived: archived ? '1' : '',
       })
       setIdeas(res.ideas)
@@ -47,7 +49,7 @@ export function Board() {
     } finally {
       setLoading(false)
     }
-  }, [status, tag, debounced, archived])
+  }, [status, tag, debounced, archived, sort])
 
   useEffect(() => {
     void load()
@@ -181,7 +183,22 @@ export function Board() {
             {s}
           </button>
         ))}
+
+        <button
+          className="chip"
+          aria-pressed={sort === 'cold'}
+          title="Longest untouched first"
+          onClick={() => setParam('sort', sort === 'cold' ? '' : 'cold')}
+        >
+          coldest
+        </button>
       </div>
+
+      {sort === 'cold' && !status && (
+        <p className="small faint" style={{ margin: 'calc(-1 * var(--s3)) 0 var(--s5)' }}>
+          Longest untouched first. Shipped and dropped ideas are left out.
+        </p>
+      )}
 
       {tags.length > 0 && (
         <div className="tag-row">

@@ -131,14 +131,36 @@ service holds **other people's password hashes**, so it is stricter:
 | POST | `/api/auth/logout` | session |
 | GET | `/api/auth/me` | none — returns `null` when signed out |
 | POST | `/api/auth/password` | session |
-| GET | `/api/ideas` | session — `?status=&tag=&q=&archived=` |
+| GET | `/api/ideas` | session — `?status=&tag=&q=&sort=&archived=` |
 | POST | `/api/ideas` | session |
 | GET/PATCH/DELETE | `/api/ideas/<id>` | session, owner only |
 | POST | `/api/ideas/<id>/share` | session, owner only |
 | GET | `/api/tags` | session |
+| GET | `/api/export` | session — `?format=json\|md`, downloads a file |
 | POST | `/api/capture` | **API token** — `X-Api-Token` header |
 | GET | `/api/public/<slug>` | none — read-only shared idea |
 | GET | `/health` | none |
+
+### Heat and the cold view
+
+Every idea carries a `heat` score, 0–100, halving every three weeks since it was
+last touched. It's computed on read from `updated_at` — there is no stored
+column and no job to keep it in sync.
+
+`?sort=cold` orders longest-untouched first, which is the point of the score:
+ideas you've forgotten rise instead of sinking. Shipped and dropped ideas are
+excluded, since those aren't neglected — unless you asked for that status
+explicitly, in which case the filter wins. On the board, anything below heat 20
+(roughly seven weeks untouched) gets a quiet `cold` marker; parked and archived
+ideas are exempt, because sitting still is what they're for.
+
+### Export
+
+`GET /api/export` returns everything that account owns, archived included.
+`format=json` round-trips the full record (tags, notes, timestamps, share slugs)
+and is the one to keep; `format=md` is a readable dump. Both come back as file
+downloads, so the Settings page links to them directly rather than going through
+fetch — the session cookie rides along on the GET.
 
 ### Quick capture from a script
 
@@ -179,16 +201,31 @@ database mid-write.
 
 ## Roadmap
 
-Phase 1 (built): capture, statuses, tags, search, per-idea share links, accounts,
-keyboard shortcuts, light/dark.
+**Built:** capture, statuses, tags, search, per-idea share links, accounts,
+keyboard shortcuts, light/dark, heat + the cold view, export.
 
-Next, in rough value order — the schema already has columns for the first two:
+Remaining, in rough value order:
 
-1. Append-only note log per idea, so ideas can evolve instead of going stale.
-2. Impact/effort scores and a 2×2 quadrant view.
-3. `heat` surfaced in the UI — it is already computed per read in `server.py`.
-4. Dashboard tile on `dashboard.html` linking out.
-5. Weekly ntfy resurfacer: "still want to build this?" for 3 cold ideas.
-6. Groq assists (auto-tag, expand a one-liner, flag near-duplicates) — the call
-   pattern already exists in [standup.py](../standup.py).
-7. Export everything as JSON + markdown.
+1. **Append-only note log per idea**, so ideas can evolve instead of going stale.
+   The `idea_notes` table already exists and export already emits a `notes` key —
+   it needs endpoints and UI.
+2. **Weekly ntfy resurfacer** — "still want to build this?" for the top few cold
+   ideas. `?sort=cold` is the query it should run. Reuses `send_ntfy` from
+   [webhook_new.py](../webhook_new.py). See the note below on which user.
+3. **Dashboard tile** on `dashboard.html`. Needs a decision first: the deck
+   dashboard authenticates with `WEBHOOK_TOKEN`, but ideas has per-user
+   sessions, so it can't know *whose* count to show. Either link out with no
+   numbers, or add a token-authed `GET /api/summary` and put one user's API
+   token in `.env`.
+4. **Impact/effort scores and a 2×2 quadrant view.** Backend is already done —
+   the columns exist and `PATCH` validates and clamps them to 1–5, so this is
+   UI only. Worth waiting until the board has ~30 ideas; a quadrant with six
+   dots is noise.
+5. **Groq assists** (auto-tag, expand a one-liner, flag near-duplicates) — the
+   call pattern already exists in [standup.py](../standup.py). Duplicate
+   detection also needs a corpus before it says anything useful.
+6. **`[[idea title]]` backlinks.** The `idea_links` table is already there.
+
+Items 2 and 3 share an open question: this service is multi-user, but ntfy and
+the deck dashboard are yours alone. Both features are realistically single-user
+and need a nominated account, not a loop over every user.

@@ -21,6 +21,7 @@ The table below is a human-readable summary; `services.json` is authoritative if
 | webhook | Termux | `webhook` | yes | yes |
 | ideas | Termux | `ideas` | yes | yes |
 | forza | Termux | `forza` | yes | yes |
+| buddy | proot | `buddy` | yes | yes |
 | ferran_alert | Termux | `ferran-alert` | yes | yes |
 | feeder (ESP32) | remote hardware | n/a | n/a | yes |
 
@@ -35,6 +36,7 @@ The table below is a human-readable summary; `services.json` is authoritative if
 - **webhook** (`webhook_new.py`) — Flask on port **2122**. Restart/stop commands, status, dashboard data, quick actions, standup routes, ESP32 feed endpoints.
 - **ideas** (`ideas/server.py`) — Idea board on port **2124**, served at `ideas.prayas.space`. The only service with its own user accounts and a database (`~/ideas.db`); it does not use `WEBHOOK_TOKEN`. See [Idea board](ideas.md).
 - **forza** (`forza_listener.py`) — FH6 telemetry server (HTTP + WebSocket on port 8000, UDP listener on 5300) feeding the dashboard's Forza panel.
+- **buddy** (`deskbuddy/broker.py`) — Desk voice assistant broker (HTTP + WebSocket on port **2125**, inside proot Ubuntu). Runs the "hey jarvis" wake word and Groq STT/LLM/TTS; the ESP32 streams mic audio and shows reactive OLED eyes, replies play on the phone speaker. LAN-only, not tunnelled. See [Desk Buddy](deskbuddy.md).
 - **ferran_alert** (`ferran_alert.mjs`) — Ferran Torres shot-alert poller.
 - **feeder** — ESP32 cat feeder. Checked over HTTP; can't be restarted remotely (it's separate hardware), but `/feed`, `/door-open`, `/door-close` are exposed as dashboard control-panel buttons.
 

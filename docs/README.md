@@ -16,6 +16,7 @@ The Cyberdeck is a rooted Android phone permanently stationed at your desk. It r
 | PC app launcher tiles | [Deck shortcuts](deck-shortcuts.md) |
 | Daily work log and Friday update | [Weekly standup](standup.md) |
 | Idea board, accounts, backups | [Idea board](ideas.md) |
+| ESP32 voice assistant, wake word | [Desk Buddy](deskbuddy.md) |
 | tmux, ntfy, webhook, Cloudflare CLI | [Commands](commands.md) |
 | Troubleshooting | [Debugging](debugging.md) |
 
@@ -39,6 +40,7 @@ These files mirror what typically lives under `~` on the device. They load secre
 | `test-standup.sh` | Non-destructive smoke test for the standup endpoints |
 | `ideas/` | Idea board — own accounts, SQLite, React build (port 2124) |
 | `sketch_may1a/` | ESP32 cat feeder firmware |
+| `deskbuddy/` | Voice assistant — ESP32 firmware + Groq wake-word broker (port 2125, proot) |
 
 Copy `.env.example` to `.env` and fill in values before deploying.
 
