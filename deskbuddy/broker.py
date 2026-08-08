@@ -402,7 +402,12 @@ async def ws_handler(request):
     try:
         async for msg in ws:
             if msg.type == web.WSMsgType.BINARY:
-                await handle_audio(msg.data)
+                try:
+                    await handle_audio(msg.data)
+                except Exception as exc:  # noqa: BLE001 — never drop the socket over one frame
+                    print(f"[buddy] audio handler error: {exc}")
+            elif msg.type == web.WSMsgType.ERROR:
+                print(f"[buddy] ws error: {ws.exception()}")
             # text frames from the device are ignored for now
     finally:
         clients.discard(ws)
