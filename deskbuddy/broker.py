@@ -73,6 +73,8 @@ SYSTEM_PROMPT = os.environ.get(
 
 WAKE_MODEL = os.environ.get("BUDDY_WAKE_MODEL", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("BUDDY_WAKE_THRESHOLD", "0.5"))
+# "onnx" or "tflite". Default onnx — tflite-runtime has no wheel on newer Python.
+WAKE_FRAMEWORK = os.environ.get("BUDDY_WAKE_FRAMEWORK", "onnx")
 
 # Optional explicit playback command; "{file}" is replaced with the wav path.
 # When empty, a few common players are tried in order (paplay -> ffplay -> aplay).
@@ -460,8 +462,10 @@ def init_oww():
     except Exception as exc:  # noqa: BLE001
         print(f"[buddy] model download note: {exc}")
     try:
-        model = OWWModel(wakeword_models=[WAKE_MODEL])
-        print(f"[buddy] wake word ready: '{WAKE_MODEL}' (threshold {WAKE_THRESHOLD})")
+        model = OWWModel(wakeword_models=[WAKE_MODEL],
+                         inference_framework=WAKE_FRAMEWORK)
+        print(f"[buddy] wake word ready: '{WAKE_MODEL}' "
+              f"({WAKE_FRAMEWORK}, threshold {WAKE_THRESHOLD})")
         return model
     except Exception as exc:  # noqa: BLE001
         print(f"[buddy] oww init failed ({exc}); wake word DISABLED.")
