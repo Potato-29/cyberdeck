@@ -75,6 +75,8 @@ WAKE_MODEL = os.environ.get("BUDDY_WAKE_MODEL", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("BUDDY_WAKE_THRESHOLD", "0.5"))
 # "onnx" or "tflite". Default onnx — tflite-runtime has no wheel on newer Python.
 WAKE_FRAMEWORK = os.environ.get("BUDDY_WAKE_FRAMEWORK", "onnx")
+# BUDDY_DEBUG=1 prints a mic level + peak wake score every ~2s while idle.
+DEBUG = os.environ.get("BUDDY_DEBUG", "").lower() not in ("", "0", "false", "no")
 
 # Optional explicit playback command; "{file}" is replaced with the wav path.
 # When empty, a few common players are tried in order (paplay -> ffplay -> aplay).
@@ -121,6 +123,10 @@ silence_run = 0
 last_wake_ts = 0.0
 last_transcript = ""
 last_reply = ""
+
+_dbg_n = 0                     # BUDDY_DEBUG: frame counter for the level meter
+_dbg_rms = 0.0
+_dbg_score = 0.0
 
 
 # ── WebSocket broadcast (fan-out, mirrors forza/forza_listener.py) ───────────
@@ -354,6 +360,16 @@ async def process_frame(frame: bytes) -> None:
             return
         scores = oww_model.predict(arr)
         score = scores.get(WAKE_MODEL, max(scores.values(), default=0.0))
+        if DEBUG:
+            global _dbg_n, _dbg_rms, _dbg_score
+            _dbg_n += 1
+            _dbg_rms = max(_dbg_rms, _rms(arr))
+            _dbg_score = max(_dbg_score, score)
+            if _dbg_n >= 25:   # ~2s of 80ms frames
+                print(f"[buddy] mic: peak_rms={_dbg_rms:.0f} peak_score={_dbg_score:.2f}")
+                _dbg_n = 0
+                _dbg_rms = 0.0
+                _dbg_score = 0.0
         if score >= WAKE_THRESHOLD:
             listening = True
             capture_buf.clear()
