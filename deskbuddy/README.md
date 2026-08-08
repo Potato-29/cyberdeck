@@ -13,8 +13,8 @@ Full documentation: [../docs/deskbuddy.md](../docs/deskbuddy.md).
 | --- | --- |
 | `broker.py` | aiohttp HTTP + WebSocket service on port 2125 — wake word + Groq pipeline |
 | `dashboard.html` | Single-file HUD: live state, eyes preview, a text box to test the loop |
-| `firmware/deskbuddy.ino` | ESP32 sketch — I2S mic streaming + OLED eyes |
-| `firmware/secrets.h.example` | Template for Wi-Fi + broker config (real `secrets.h` is gitignored) |
+| `firmware/deskbuddy/deskbuddy.ino` | ESP32 sketch — I2S mic streaming + OLED eyes |
+| `firmware/deskbuddy/secrets.h.example` | Template for Wi-Fi + broker config (real `secrets.h` is gitignored) |
 
 ## Run the broker (in proot Ubuntu)
 

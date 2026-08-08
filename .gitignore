@@ -4,4 +4,4 @@ dashboard.pipboy-backup.html
 ideas/web/node_modules/
 ideas/web/tsconfig.tsbuildinfo
 # ideas/web/dist/ is deliberately committed — the phone has no node toolchain.
-deskbuddy/firmware/secrets.h
+deskbuddy/firmware/deskbuddy/secrets.h

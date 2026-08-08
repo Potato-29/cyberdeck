@@ -15,12 +15,23 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <driver/i2s.h>
-#include <esp_task_wdt.h>
 #include <WebSocketsClient.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#include "secrets.h"   // WIFI_SSID, WIFI_PASS, BROKER_HOST, BROKER_PORT, MIC_GAIN
+
+// Wi-Fi the ESP32 joins (must be the same LAN as the phone broker)
+#define WIFI_SSID   "your-ssid"
+#define WIFI_PASS   "your-password"
+
+// The phone's LAN IP running deskbuddy/broker.py (inside proot), and its port
+#define BROKER_HOST "192.168.29.xxx"
+#define BROKER_PORT 2125
+
+// INMP441 input gain — multiplies the 16-bit sample. Raise if the buddy is deaf,
+// lower if it clips. Start around 4 and tune against the broker's wake logs.
+#define MIC_GAIN    4
+
 
 // ── Pins ─────────────────────────────────────────────────────────────────────
 #define I2S_SCK   14          // INMP441 SCK (bit clock)
@@ -160,7 +171,6 @@ void connectWifi() {
   int tries = 0;
   while (WiFi.status() != WL_CONNECTED && tries < 40) {
     delay(500); Serial.print("."); tries++;
-    esp_task_wdt_reset();
   }
   Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
@@ -169,8 +179,6 @@ void connectWifi() {
 }
 
 void setup() {
-  esp_task_wdt_init(30, true);
-  esp_task_wdt_add(NULL);
   Serial.begin(115200);
   delay(500);
   pinMode(BOOT_BTN, INPUT_PULLUP);
@@ -191,8 +199,6 @@ void setup() {
 }
 
 void loop() {
-  esp_task_wdt_reset();
-
   if (WiFi.status() != WL_CONNECTED) {
     wsConnected = false;
     buddyState = "error";
