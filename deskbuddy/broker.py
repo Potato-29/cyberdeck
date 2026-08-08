@@ -394,7 +394,9 @@ async def handle_audio(chunk: bytes) -> None:
 
 # ── Routes ──────────────────────────────────────────────────────────────────
 async def ws_handler(request):
-    ws = web.WebSocketResponse(max_msg_size=0, heartbeat=30)
+    # arduinoWebSockets requests the "arduino" subprotocol by default; the server
+    # must echo it back or the ESP32 rejects the handshake and reconnect-loops.
+    ws = web.WebSocketResponse(protocols=("arduino",), max_msg_size=0, heartbeat=30)
     await ws.prepare(request)
     clients.add(ws)
     print(f"[buddy] client connected ({len(clients)} total)")
