@@ -98,7 +98,40 @@ def week_start(when=None):
     return monday.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def read_entries(since=None):
+def week_key(when=None):
+    """ISO week label ("2026-W33") - the id every week-scoped thing is keyed by."""
+    return (when or _now()).strftime("%G-W%V")
+
+
+def week_bounds(key):
+    """Week key -> [Monday 00:00, next Monday 00:00) local. None if unparseable.
+
+    strptime hands back a naive Monday. Stamping it with _now()'s tzinfo would
+    apply today's UTC offset to a week that may have run on the other side of a
+    DST change, so both edges are resolved from the naive value instead.
+    Unparseable keys (including a 53rd week in a 52-week year) raise here, which
+    makes validation free.
+    """
+    try:
+        monday = datetime.strptime(f"{key}-1", "%G-W%V-%u")
+    except (ValueError, TypeError):
+        return None
+    return monday.astimezone(), (monday + timedelta(days=7)).astimezone()
+
+
+def week_label(start, end):
+    """"Aug 10 - Aug 16" for the header. Sunday-inclusive, and no %-d: that is
+    glibc-only and standalone mode gets run off-device."""
+    last = end - timedelta(days=1)
+    if start.year != last.year:
+        return (f"{start:%b} {start.day}, {start.year} - "
+                f"{last:%b} {last.day}, {last.year}")
+    return f"{start:%b} {start.day} - {last:%b} {last.day}"
+
+
+def read_entries(since=None, until=None):
+    """Entries in [since, until). The upper bound is exclusive so week_bounds()
+    can be splatted in and adjacent weeks never both claim the same entry."""
     if not LOG_FILE.is_file():
         return []
     entries = []
@@ -112,11 +145,79 @@ def read_entries(since=None):
                 entry["_dt"] = datetime.fromisoformat(entry["ts"])
             except (ValueError, KeyError):
                 continue  # skip a corrupt line rather than lose the log
+            if entry["_dt"].tzinfo is None:
+                # A hand-added line has no offset, and comparing naive against
+                # the aware bounds below would raise.
+                entry["_dt"] = entry["_dt"].astimezone()
             if since and entry["_dt"] < since:
+                continue
+            if until and entry["_dt"] >= until:
                 continue
             entries.append(entry)
     entries.sort(key=lambda e: e["_dt"])
     return entries
+
+
+def week_index():
+    """Every week the log or the draft cache knows about, newest first.
+
+    One pass over the whole log: it is a few hundred lines, so counting all
+    weeks at once is cheaper than the round trips a per-week query would cost.
+    """
+    counts = {}
+    for entry in read_entries():
+        key = week_key(entry["_dt"])
+        counts[key] = counts.get(key, 0) + 1
+    cache = _load_draft_cache()
+    current = week_key()
+    out = []
+    for key in sorted(set(counts) | set(cache) | {current}, reverse=True):
+        bounds = week_bounds(key)
+        if not bounds:
+            continue  # a hand-edited cache key we cannot place on a calendar
+        start, end = bounds
+        out.append({
+            "week": key,
+            "week_start": start.date().isoformat(),
+            "range": week_label(start, end),
+            "entry_count": counts.get(key, 0),
+            "has_draft": key in cache,
+            "is_current": key == current,
+        })
+    return out
+
+
+def resolve_week(requested=None, index=None):
+    """Which week to show when the URL doesn't say. -> (key, how); (None, "bad").
+
+    Monday morning is empty by definition, so defaulting to "this week" hid the
+    Friday that the cached draft was built from, and the log and the draft ended
+    up describing different weeks. Fall back to the newest week that actually
+    has something in it, and report which branch fired so the page can admit it
+    is not showing today.
+    """
+    if requested:
+        return (requested, "requested") if week_bounds(requested) else (None, "bad")
+
+    current = week_key()
+    index = week_index() if index is None else index
+    for week in index:  # newest first; the keys sort chronologically as strings
+        if week["week"] > current:
+            continue  # a future week (clock skew) is never the default
+        if week["entry_count"] or week["has_draft"]:
+            return week["week"], "current" if week["week"] == current else "latest"
+    return current, "current"
+
+
+def week_neighbours(key, index=None):
+    """Adjacent weeks that have something in them, so the arrows never land on a
+    blank one. The current week always counts, so there is always a way back."""
+    index = week_index() if index is None else index
+    current = week_key()
+    known = {w["week"] for w in index if w["entry_count"] or w["has_draft"]}
+    known = {k for k in known | {current} if k <= current}  # never past today
+    return (max((k for k in known if k < key), default=None),
+            min((k for k in known if k > key), default=None))
 
 
 def append_entry(text, tag):
@@ -202,12 +303,18 @@ def push(message, title, priority="default", click=None, action_label=None):
         return False
 
 
-def standup_link(path="/standup", fragment=""):
-    # The fragment has to trail the query string, or the browser swallows the token.
+def standup_link(path="/standup", fragment="", week=""):
+    """The fragment has to trail the query string, or the browser swallows the token.
+
+    ?week= pins a push to the week it describes rather than to whenever it gets
+    opened - Friday's notification tapped on Monday used to land on the empty
+    new week.
+    """
     if not RESTART_URL:
         return ""
+    query = f"?token={SECRET}" + (f"&week={week}" if week else "")
     suffix = f"#{fragment}" if fragment else ""
-    return f"{RESTART_URL}{path}?token={SECRET}{suffix}"
+    return f"{RESTART_URL}{path}{query}{suffix}"
 
 
 # ── Draft generation ─────────────────────────────────────
@@ -358,9 +465,15 @@ def _load_draft_cache():
         data = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
     except (ValueError, OSError):
         return {}
-    if "week" in data:  # migrate the old single-draft cache format
-        return {data["week"]: data}
-    return data
+    if isinstance(data, dict) and "week" in data:  # old single-draft format
+        data = {data["week"]: data}
+    if not isinstance(data, dict):
+        return {}
+    # A draft with no entries behind it is the artefact of a REGENERATE on an
+    # empty week. Dropping those on load cleans out any already written and
+    # makes "has a draft" mean "has something worth reading".
+    return {k: v for k, v in data.items()
+            if isinstance(v, dict) and v.get("entry_count")}
 
 
 def _save_draft_cache(cache):
@@ -370,27 +483,52 @@ def _save_draft_cache(cache):
         pass
 
 
-def build_draft(refresh=False):
-    """Draft for the current week, cached so re-opening the page is free.
+def build_draft(week=None, refresh=False, generate_if_missing=True):
+    """Draft for one ISO week, cached under that week's key.
 
-    A fresh week starts with zero entries, so opening the page right after the
-    week rolls over (e.g. the weekend after Friday's push) must not blow away
-    the last completed week's draft with an empty one - fall back to the most
-    recently cached week until this one actually has notes in it.
+    Keyed by the week it describes, never by "now": regenerating on a Monday
+    used to write an empty draft under the new key and strand Friday's, which
+    left the previous week unreachable from the page entirely. Choosing *which*
+    week belongs to the route (resolve_week), not here.
     """
-    start = week_start()
-    key = start.strftime("%G-W%V")
+    key = week or week_key()
+    bounds = week_bounds(key)
+    if not bounds:
+        return None
+    start, end = bounds
     cache = _load_draft_cache()
 
     if not refresh and key in cache:
-        return cache[key]
+        return dict(cache[key], status="cached")  # status is per-request
 
-    entries = read_entries(since=start)
+    entries = read_entries(since=start, until=end)
 
-    if not refresh and not entries and cache:
-        latest_key = max(cache)
-        if latest_key != key:
-            return cache[latest_key]
+    if not entries:
+        # Never cache an empty draft. Drop a stale one instead, so deleting a
+        # week's notes and regenerating leaves nothing behind.
+        if cache.pop(key, None):
+            _save_draft_cache(cache)
+        return {
+            "week": key,
+            "week_start": start.date().isoformat(),
+            "entry_count": 0,
+            "generated_by": "template",
+            "generated_at": _now().isoformat(timespec="seconds"),
+            "text": generate_fallback([]),  # the five headings, still pasteable
+            "status": "empty",
+        }
+
+    if not refresh and not generate_if_missing:
+        # Browsing back through history must not cost a model call.
+        return {
+            "week": key,
+            "week_start": start.date().isoformat(),
+            "entry_count": len(entries),
+            "generated_by": None,
+            "generated_at": None,
+            "text": "",
+            "status": "not-generated",
+        }
 
     text = generate_with_groq(entries)
     result = {
@@ -403,7 +541,7 @@ def build_draft(refresh=False):
     }
     cache[key] = result
     _save_draft_cache(cache)
-    return result
+    return dict(result, status="generated")
 
 
 # ── Routes ───────────────────────────────────────────────
@@ -438,14 +576,53 @@ def standup_entries():
         days = int(request.args.get("days", "0"))
     except ValueError:
         days = 0
-    since = _now() - timedelta(days=days) if days > 0 else week_start()
-    entries = read_entries(since=since)
+    requested = (request.args.get("week") or "").strip()
+
+    index = week_index()  # built once; resolve and neighbours both read it
+    current = week_key()
+
+    if not requested and days > 0:
+        # Legacy rolling window (note.ps1 -List): no week semantics, so keep
+        # reporting the current week's Monday exactly as it always did.
+        key, how = current, "days"
+        start, end = week_bounds(current)
+        entries = read_entries(since=_now() - timedelta(days=days))
+    else:
+        key, how = resolve_week(requested or None, index)
+        if not key:
+            return jsonify({
+                "error": f"Bad week '{requested}', expected e.g. 2026-W33"
+            }), 400
+        start, end = week_bounds(key)
+        entries = read_entries(since=start, until=end)
+
+    prev_week, next_week = week_neighbours(key, index)
     return jsonify({
-        "week_start": week_start().date().isoformat(),
+        "week": key,
+        "week_start": start.date().isoformat(),  # note.ps1 reads this
+        "week_end": (end - timedelta(days=1)).date().isoformat(),
+        "range": week_label(start, end),
         "today": _now().date().isoformat(),
+        "current_week": current,
+        "is_current": key == current,
+        "resolved": how,
+        "prev_week": prev_week,
+        "next_week": next_week,
+        "has_draft": any(w["week"] == key and w["has_draft"] for w in index),
+        "entry_count": len(entries),
         "tags": list(TAGS),
         "entries": [_public(e) for e in entries],
     }), 200
+
+
+@bp.route("/standup/weeks", methods=["GET"])
+def standup_weeks():
+    """Index for a week picker. Kept off /entries, which is refetched after
+    every save and delete and does not need the whole history each time."""
+    denied = _guard()
+    if denied:
+        return denied
+    return jsonify({"current": week_key(), "weeks": week_index()}), 200
 
 
 @bp.route("/standup/log", methods=["POST"])
@@ -482,7 +659,28 @@ def standup_weekly():
     if denied:
         return denied
     refresh = request.args.get("refresh") in ("1", "true", "yes")
-    return jsonify(build_draft(refresh=refresh)), 200
+    requested = (request.args.get("week") or "").strip()
+    key, how = resolve_week(requested or None)
+    if not key:
+        return jsonify({
+            "error": f"Bad week '{requested}', expected e.g. 2026-W33"
+        }), 400
+
+    start, _end = week_bounds(key)
+    if refresh and start > _now():
+        return jsonify({"error": "That week hasn't happened yet"}), 400
+
+    # Opening the DRAFT tab has always generated on demand, so the week you land
+    # on still does. Deliberately stepping back to an older one does not: that
+    # would fire a 60s model call per arrow press.
+    auto = how != "requested" or key == week_key()
+    draft = build_draft(key, refresh=refresh, generate_if_missing=auto)
+    prev_week, next_week = week_neighbours(key)
+    return jsonify(dict(draft,
+                        resolved=how,
+                        is_current=key == week_key(),
+                        prev_week=prev_week,
+                        next_week=next_week)), 200
 
 
 @bp.route("/standup/nudge", methods=["GET", "POST"])
@@ -521,7 +719,9 @@ def standup_friday():
         f"{draft['entry_count']} entries this week. Draft is ready to copy.",
         title="🗓️ Weekly update ready",
         priority="high",
-        click=standup_link("/standup", fragment="weekly"),
+        # Pin the link to the week just generated, so opening it on Saturday or
+        # the Monday after still lands on this draft and its entries.
+        click=standup_link("/standup", fragment="weekly", week=draft["week"]),
         action_label="Open draft",
     )
     return jsonify(draft), 200

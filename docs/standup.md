@@ -106,24 +106,50 @@ Every route requires `?token=<WEBHOOK_TOKEN>`, same gate as the dashboard.
 
 | Route | Purpose |
 | --- | --- |
-| `GET /standup` | The log page (form + this week's entries + draft tab) |
-| `GET /standup/entries` | This week's entries as JSON; `?days=N` for a rolling window |
+| `GET /standup` | The log page; `?week=2026-W33` opens a specific week, `#weekly` the draft tab |
+| `GET /standup/entries` | One ISO week's entries as JSON; `?week=` picks it, `?days=N` for a rolling window instead |
+| `GET /standup/weeks` | Index of every week with entries or a draft, newest first |
 | `POST /standup/log` | Append an entry — `{"text": "...", "tag": "progress"}` |
 | `POST /standup/delete` | Remove an entry by `{"id": "..."}` |
-| `GET /standup/weekly` | The draft; `?refresh=1` regenerates instead of using the cache |
+| `GET /standup/weekly` | The draft for a week; `?week=` picks it, `?refresh=1` regenerates |
 | `POST /standup/nudge` | Send the daily "what did you do?" push (cron) |
 | `POST /standup/friday` | Regenerate the draft and push it (cron) |
 
+An unparseable `?week=` is a 400, not a 500 — `2025-W53` doesn't exist, `2026-W53`
+does. `week` wins if both `week` and `days` are given.
+
+## Which week you're looking at
+
+The week is a real parameter, and the log and the draft always share it — arrow
+through them in the page header, or pass `?week=2026-W33`.
+
+When the URL doesn't name one, the server picks: **this week if it has anything in
+it, otherwise the most recent week that does.** That is what makes the page useful
+on a Monday — you get last week's notes and last week's draft together, with the
+header saying `nothing logged this week yet`, rather than an empty log next to a
+draft built from days you can't see. The response carries `resolved: "latest"` when
+that fallback fired, so the page can admit it.
+
+Friday's ntfy push pins `?week=` to the week it generated, so tapping the
+notification on Monday still opens that Friday's draft.
+
 ## The weekly draft
 
-Generated once per ISO week and cached in `standup-weekly-cache.json` next to the
-log, so reopening the page doesn't burn a request. `[REGENERATE]` (or `?refresh=1`)
-forces a new pass — useful after logging something on Friday afternoon.
+Generated per ISO week and cached in `standup-weekly-cache.json` next to the log,
+keyed by the week it describes, so reopening the page doesn't burn a request.
+`regenerate` (or `?refresh=1`) forces a new pass for the week on screen — useful
+after logging something on Friday afternoon.
 
-The cache keeps every past week, not just the latest. If you open the page after
-the week has rolled over and haven't logged anything yet in the new week, it keeps
-showing last week's Friday draft instead of a blank one — the first note you log
-in the new week is what makes it switch over.
+Two rules keep old drafts reachable:
+
+- **A week with no entries is never cached.** Regenerating on an empty Monday used
+  to write a draft of five empty bullets under the new week's key, which then
+  satisfied the cache on every later visit and stranded Friday's draft with no way
+  to reach it. Empty drafts are also dropped when the cache is *read*, so a cache
+  already carrying one repairs itself.
+- **Stepping back to an older week never calls the model.** It shows `no draft for
+  this week yet` and a `build it` button instead, so browsing history is free. The
+  week you land on still generates on demand, as the draft tab always has.
 
 The generator is told to ground every answer in your notes and to say a section is
 thin rather than pad it, so an empty week produces an honestly empty draft. Read it
@@ -159,8 +185,10 @@ It regenerates the draft, so each run costs one model call (two with `--push`).
 
 Things the script can't check — do these by eye once:
 
-- The log page on your phone: tag chips switch, `[SAVE ENTRY]` clears the box,
-  `×` deletes, the FRIDAY DRAFT tab and `[COPY]` work.
+- The log page on your phone: tag stickers switch, `log it` clears the box, `×`
+  deletes, the `friday draft` tab and `copy` work.
+- The week arrows step both tabs together, `›` greys out on the current week, and
+  the light/dark toggle survives a reload.
 - Tapping the ntfy notification opens the page **already logged in** — if you get
   a 401, the click URL lost its token.
 - `note.ps1` from the PC, including `-List`.

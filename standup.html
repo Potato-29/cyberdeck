@@ -3,352 +3,486 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STANDUP LOG</title>
+<title>standup</title>
+<meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shantell+Sans:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ── PAPER ──────────────────────────────────────────────
+     Ink on paper, not a HUD. Nothing is pure black or pure
+     white; that is most of what keeps it calm.                */
   :root {
-    --bg:       #060a10;
-    --surface:  #0c131c;
-    --border:   rgba(232,238,244,0.16);
-    --border-bright: #e8eef4;
-    --accent:   #1fe0ff;
-    --accent-dim: rgba(31,224,255,0.35);
-    --text:     #e8eef4;
-    --dim:      #5a6a7c;
-    --warn:     #ffb000;
-    --danger:   #ff3b4e;
-    --blue:     #1fe0ff;
-    --violet:   #b98bff;
-    --pink:     #ff7ecb;
-    --header-h: 44px;
+    --paper:      #f7f2e8;
+    --paper-deep: #efe8db;
+    --panel:      #fffdf8;
+    --ink:        #2a2622;
+    --ink-soft:   #7a7168;
+    --ink-faint:  #b8ada0;
+    --rule:       rgba(42,38,34,0.18);
+    --shadow:     rgba(42,38,34,0.16);
+    --dot:        rgba(42,38,34,0.055);
+
+    --tag-progress: #2f9c8b;  --tag-progress-tint: #dcefeb;
+    --tag-ai:       #5f74cc;  --tag-ai-tint:       #e0e4f6;
+    --tag-gap:      #c4761f;  --tag-gap-tint:      #f6e6d4;
+    --tag-values:   #cc6b86;  --tag-values-tint:   #f7e2e7;
+    --tag-next:     #8a6fc0;  --tag-next-tint:     #eae2f6;
+
+    --font-hand: 'Shantell Sans', 'Comic Sans MS', cursive;
+    --font-body: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* Night ink. Guarded so an explicit light choice still wins. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #17161a;
+      --paper-deep: #101014;
+      --panel:      #201f24;
+      --ink:        #ece7dd;
+      --ink-soft:   #9a938a;
+      --ink-faint:  #5d5751;
+      --rule:       rgba(236,231,221,0.20);
+      /* Solid, not alpha: the printed offset has to stay readable against a
+         near-black page, and a translucent black over it does nothing. */
+      --shadow:     #08070a;
+      --dot:        rgba(236,231,221,0.05);
+
+      --tag-progress: #4fc7b3;  --tag-progress-tint: #17332f;
+      --tag-ai:       #8fa0f0;  --tag-ai-tint:       #1d2140;
+      --tag-gap:      #f0a458;  --tag-gap-tint:      #3a2814;
+      --tag-values:   #f090a6;  --tag-values-tint:   #3a1e26;
+      --tag-next:     #b096e8;  --tag-next-tint:     #271d3c;
+    }
+  }
+  /* Repeated so the in-page toggle wins in both directions. */
+  :root[data-theme="dark"] {
+    --paper:      #17161a;
+    --paper-deep: #101014;
+    --panel:      #201f24;
+    --ink:        #ece7dd;
+    --ink-soft:   #9a938a;
+    --ink-faint:  #5d5751;
+    --rule:       rgba(236,231,221,0.20);
+    --shadow:     #08070a;
+    --dot:        rgba(236,231,221,0.05);
+
+    --tag-progress: #4fc7b3;  --tag-progress-tint: #17332f;
+    --tag-ai:       #8fa0f0;  --tag-ai-tint:       #1d2140;
+    --tag-gap:      #f0a458;  --tag-gap-tint:      #3a2814;
+    --tag-values:   #f090a6;  --tag-values-tint:   #3a1e26;
+    --tag-next:     #b096e8;  --tag-next-tint:     #271d3c;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
+    /* Halftone, faint enough to read as paper grain rather than pattern. */
     background:
-      linear-gradient(rgba(31,224,255,0.03) 1px, transparent 1px) 0 0 / 100% 28px,
-      var(--bg);
-    color: var(--text);
-    font-family: 'Chakra Petch', 'Share Tech Mono', sans-serif;
+      radial-gradient(var(--dot) 1.2px, transparent 1.2px) 0 0 / 7px 7px,
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
     min-height: 100vh;
-    padding-bottom: 40px;
+    padding-bottom: 56px;
     -webkit-text-size-adjust: 100%;
-  }
-
-  /* ── SCANLINES ── */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 2px,
-      rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
-    pointer-events: none;
-    z-index: 9999;
-  }
-  .scanline-flicker {
-    position: fixed;
-    inset: 0;
-    background: rgba(31,224,255,0.02);
-    pointer-events: none;
-    z-index: 9998;
-    animation: flicker 8s infinite;
-  }
-  @keyframes flicker {
-    0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% { opacity: 0; }
-    20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.05; }
   }
 
   /* ── HEADER ── */
   #header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: var(--header-h);
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 14px;
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 1px 0 var(--accent-dim);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 18px 16px 6px;
   }
-  .status-dot {
-    width: 8px; height: 8px;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent-dim);
-    flex-shrink: 0;
+  .wordmark {
+    font-family: var(--font-hand);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
-  .logo {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 3px;
-    color: var(--text);
-    text-transform: uppercase;
-  }
-  .logo::after {
-    content: '_';
-    animation: blink 1s infinite;
-    color: var(--accent);
-    text-shadow: 0 0 8px var(--accent);
-  }
-  @keyframes blink { 0%,49% { opacity:1 } 50%,100% { opacity:0 } }
-  .week-label {
+  #theme-btn {
     margin-left: auto;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    color: var(--accent);
+    width: 38px; height: 38px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    border-radius: 12px 14px 11px 13px;
+  }
+
+  /* ── WEEK NAVIGATOR ──
+     The one control both tabs obey, so they can never disagree
+     about which seven days are on screen.                       */
+  #weeknav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 4px 16px 10px;
+  }
+  .arrow {
+    flex: none;
+    width: 40px; height: 40px;
+    padding: 0;
+    font-size: 19px;
+    line-height: 1;
+    border-radius: 13px 11px 14px 12px;
+  }
+  #week-face { flex: 1; text-align: center; min-width: 0; }
+  #week-name {
+    font-family: var(--font-hand);
+    font-size: 19px;
+    font-weight: 600;
+  }
+  #week-sub {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 1px;
   }
 
   /* ── TABS ── */
   #tabs {
     display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    gap: 8px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px 14px;
   }
   .tab {
     flex: 1;
-    text-align: center;
-    padding: 10px 6px;
-    font-size: 11px;
+    font-family: var(--font-hand);
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: 2px;
-    color: var(--dim);
+    padding: 9px 8px;
+    text-align: center;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 2px solid var(--rule);
+    border-radius: 14px 16px 13px 15px;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
     user-select: none;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   }
   .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    background: rgba(31,224,255,0.06);
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+    box-shadow: 2px 2px 0 var(--shadow);
   }
 
-  main { padding: 14px; max-width: 720px; margin: 0 auto; }
+  main { padding: 0 16px; max-width: 720px; margin: 0 auto; }
   .view { display: none; }
   .view.active { display: block; }
 
-  /* ── PANELS ── */
+  /* ── PANELS ──
+     Ink outline + a printed offset, in place of the old notches. */
   .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
-    padding: 14px;
-    margin-bottom: 14px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: var(--panel);
+    border: 2px solid var(--ink);
+    border-radius: 18px 22px 16px 20px;
+    box-shadow: 3px 3px 0 var(--shadow);
+    padding: 16px;
+    margin-bottom: 20px;
   }
-  .panel::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 14px; height: 14px;
-    border-top: 1px solid var(--accent);
-    border-left: 1px solid var(--accent);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-  }
-  .panel:hover::after { opacity: 0.9; }
-  .panel::before {
-    content: attr(data-title);
-    display: block;
-    font-size: 10px;
+  .panel.wob { border-radius: 21px 17px 22px 16px; }
+  .panel h2 {
+    font-family: var(--font-hand);
+    font-size: 17px;
     font-weight: 600;
-    letter-spacing: 3px;
-    color: var(--dim);
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    padding-left: 10px;
-    border-bottom: 1px solid var(--border);
-    border-left: 2px solid var(--accent);
+    margin-bottom: 12px;
   }
 
-  /* ── FORM ── */
+  /* ── COMPOSER ── */
   textarea {
+    display: block;
     width: 100%;
-    min-height: 84px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 15px;
-    padding: 10px;
+    min-height: 96px;
+    background: var(--paper-deep);
+    border: 2px solid var(--rule);
+    border-radius: 14px 17px 13px 16px;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    padding: 11px 13px;
     resize: vertical;
+    transition: border-color 0.15s ease;
   }
-  textarea:focus {
-    outline: none;
-    border-color: var(--accent-dim);
-    box-shadow: 0 0 10px rgba(31,224,255,0.12);
-  }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-  .chip {
-    border: 1px solid var(--border);
-    color: var(--dim);
-    padding: 6px 10px;
-    font-size: 11px;
-    letter-spacing: 1px;
+  textarea::placeholder { color: var(--ink-faint); }
+  textarea:focus { outline: none; border-color: var(--ink); }
+
+  .stickers { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .sticker {
+    font-family: var(--font-hand);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 4px 11px;
+    border: 2px solid var(--ink-faint);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    background: transparent;
     cursor: pointer;
     user-select: none;
-    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+    transform: rotate(-1.5deg);
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   }
-  .chip.active {
-    color: var(--bg);
-    background: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-dim);
+  .stickers .sticker:nth-child(even) { transform: rotate(1.2deg); }
+  .sticker.on {
+    color: var(--tag);
+    background: var(--tag-tint);
+    border-color: var(--tag);
+    box-shadow: 2px 2px 0 var(--shadow);
   }
-  button {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    padding: 12px;
-    cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, background 0.15s ease;
-  }
-  button:hover   { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(31,224,255,0.15); }
-  button:active  { background: var(--accent); color: var(--bg); border-color: var(--accent); box-shadow: none; }
-  button:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
-  button.ghost { border-color: var(--border); color: var(--dim); }
-  button.ghost:hover { border-color: var(--border-bright); color: var(--text); box-shadow: none; }
 
-  .row { display: flex; gap: 8px; }
+  /* Tag palette, shared by the pickers and the entry stickers. */
+  .t-progress { --tag: var(--tag-progress); --tag-tint: var(--tag-progress-tint); }
+  .t-ai       { --tag: var(--tag-ai);       --tag-tint: var(--tag-ai-tint); }
+  .t-gap      { --tag: var(--tag-gap);      --tag-tint: var(--tag-gap-tint); }
+  .t-values   { --tag: var(--tag-values);   --tag-tint: var(--tag-values-tint); }
+  .t-next     { --tag: var(--tag-next);     --tag-tint: var(--tag-next-tint); }
+
+  /* ── BUTTONS ──
+     Pressing one physically moves it onto its own shadow.       */
+  button {
+    font-family: var(--font-hand);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--panel);
+    border: 2px solid var(--ink);
+    border-radius: 14px 16px 13px 15px;
+    padding: 10px 16px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--shadow);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  }
+  button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 var(--shadow);
+  }
+  button:disabled {
+    opacity: 0.42;
+    cursor: default;
+    pointer-events: none;
+    box-shadow: none;
+  }
+  button.primary { width: 100%; background: var(--ink); color: var(--paper); }
+  button.quiet { border-color: var(--rule); color: var(--ink-soft); box-shadow: none; }
+  .row { display: flex; gap: 10px; }
   .row button { flex: 1; }
 
-  /* ── ENTRIES ── */
-  .day-head {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--dim);
-    border-bottom: 1px dashed var(--border);
-    padding: 10px 0 4px;
+  /* ── PAST-WEEK NOTE ──
+     A note always saves with now(). Rather than blocking the main
+     action behind an extra tap, say where it will land.          */
+  #past-note {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
   }
-  .entry {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(232,238,244,0.08);
-    font-size: 14px;
-    line-height: 1.45;
+  #past-note button { flex: none; font-size: 13px; padding: 5px 11px; }
+  body.past #past-note { display: flex; }
+
+  /* ── DAY CAPTION ── */
+  .day {
+    display: inline-block;
+    font-family: var(--font-hand);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--paper-deep);
+    border: 2px solid var(--ink);
+    border-radius: 8px 10px 7px 9px;
+    box-shadow: 2px 2px 0 var(--shadow);
+    padding: 3px 10px;
+    margin: 22px 0 16px;
+    transform: rotate(-0.6deg);
   }
-  .entry .tag {
-    flex: none;
-    font-size: 9px;
-    letter-spacing: 1px;
-    padding: 2px 5px;
-    border: 1px solid var(--border);
-    color: var(--dim);
-    margin-top: 2px;
+  #entries > .day:first-child { margin-top: 4px; }
+
+  /* ── SPEECH BUBBLES ── */
+  .entry { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 26px; }
+  .bubble {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: var(--panel);
+    border: 2px solid var(--ink);
+    border-radius: 16px 19px 15px 18px;
+    box-shadow: 2px 2px 0 var(--shadow);
+    padding: 11px 13px;
   }
-  .tag-progress { color: var(--accent) !important; border-color: var(--accent-dim) !important; }
-  .tag-ai       { color: #00ccff !important;       border-color: rgba(0,204,255,0.35) !important; }
-  .tag-gap      { color: var(--warn) !important;   border-color: rgba(255,176,0,0.35) !important; }
-  .tag-values   { color: var(--pink) !important;   border-color: rgba(255,126,203,0.35) !important; }
-  .tag-next     { color: var(--violet) !important; border-color: rgba(185,139,255,0.35) !important; }
-  .entry .txt { flex: 1; word-break: break-word; }
-  .entry .del {
-    flex: none;
-    color: var(--dim);
+  .entry:nth-child(even) .bubble { border-radius: 19px 15px 18px 16px; }
+  /* The tail: an ink triangle with a slightly smaller paper one on top. */
+  .bubble::before, .bubble::after {
+    content: '';
+    position: absolute;
+    width: 0; height: 0;
+    border-style: solid;
+  }
+  .bubble::before {
+    bottom: -15px; left: 20px;
+    border-width: 15px 13px 0 0;
+    border-color: var(--ink) transparent transparent transparent;
+  }
+  .bubble::after {
+    bottom: -11px; left: 23px;
+    border-width: 11px 9px 0 0;
+    border-color: var(--panel) transparent transparent transparent;
+  }
+  .bubble .txt { word-break: break-word; padding-right: 20px; }
+  .bubble .del {
+    position: absolute;
+    top: 6px; right: 8px;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1;
+    color: var(--ink-faint);
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 2px 4px;
     cursor: pointer;
-    padding: 0 4px;
-    font-size: 14px;
   }
-  .entry .del:active { color: var(--danger); }
-  .empty { color: var(--dim); font-size: 13px; padding: 14px 0; text-align: center; }
+  .bubble .del:active { color: #c0392b; transform: none; }
+  .entry .sticker {
+    flex: none;
+    margin-top: 9px;
+    cursor: default;
+    color: var(--tag);
+    background: var(--tag-tint);
+    border-color: var(--tag);
+  }
+
+  .empty {
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: 16px;
+    text-align: center;
+    padding: 26px 0;
+  }
 
   /* ── DRAFT ── */
+  .meta { font-size: 13px; color: var(--ink-soft); margin-bottom: 12px; }
+  .meta b { color: var(--ink); font-weight: 600; }
   #draft-text {
     white-space: pre-wrap;
     word-break: break-word;
-    font-size: 14px;
-    line-height: 1.6;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    padding: 12px;
-    max-height: 58vh;
+    font-size: 15px;
+    line-height: 1.65;
+    background: var(--paper-deep);
+    border: 2px solid var(--rule);
+    border-radius: 14px 17px 13px 16px;
+    padding: 14px;
+    max-height: 56vh;
     overflow-y: auto;
   }
-  .meta { font-size: 11px; color: var(--dim); margin-bottom: 10px; }
-  .meta b { color: var(--accent); font-weight: normal; }
+  #draft-text.note {
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    text-align: center;
+    padding: 30px 14px;
+  }
 
   /* ── TOAST ── */
   #toast {
     position: fixed;
     left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--surface);
-    border: 1px solid var(--accent-dim);
-    color: var(--accent);
+    bottom: 26px;
+    transform: translateX(-50%) translateY(90px);
+    font-family: var(--font-hand);
+    font-size: 14px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 14px 16px 13px 15px;
     padding: 10px 18px;
-    font-size: 12px;
-    letter-spacing: 1px;
     z-index: 500;
-    transition: transform 0.25s ease;
-    box-shadow: 0 0 20px rgba(31,224,255,0.15);
     max-width: 90vw;
     text-align: center;
+    transition: transform 0.22s ease;
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
-  #toast.err { border-color: var(--danger); color: var(--danger); }
+  #toast.err { background: #b23b30; color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
 </style>
+<script>
+  // Applied before first paint, so a dark phone never flashes cream.
+  (function () {
+    try {
+      var t = localStorage.getItem('standup-theme');
+      if (t) document.documentElement.dataset.theme = t;
+    } catch (e) { /* private mode */ }
+  })();
+</script>
 </head>
 <body>
 
-<div class="scanline-flicker"></div>
-
 <div id="header">
-  <div class="status-dot"></div>
-  <span class="logo">STANDUP LOG</span>
-  <span class="week-label" id="week-label">--</span>
+  <span class="wordmark">standup</span>
+  <button id="theme-btn" title="light / dark">◐</button>
+</div>
+
+<div id="weeknav">
+  <button class="arrow" id="prev-btn" title="previous week">‹</button>
+  <div id="week-face">
+    <div id="week-name">…</div>
+    <div id="week-sub">loading</div>
+  </div>
+  <button class="arrow" id="next-btn" title="next week">›</button>
 </div>
 
 <div id="tabs">
-  <div class="tab active" data-view="log">[ LOG ]</div>
-  <div class="tab" data-view="weekly">[ FRIDAY DRAFT ]</div>
+  <div class="tab active" data-view="log">log</div>
+  <div class="tab" data-view="weekly">friday draft</div>
 </div>
 
 <main>
-  <!-- ── LOG VIEW ── -->
+  <!-- ── LOG ── -->
   <section class="view active" id="view-log">
-    <div class="panel" data-title="[ WHAT DID YOU DO? ]">
-      <textarea id="note" placeholder="shipped the deck agent, fixed the hardcoded IPs..."
+    <div class="panel" id="composer">
+      <h2>what did you do?</h2>
+      <textarea id="note" placeholder="shipped the deck agent, fixed the hardcoded IPs…"
                 autocomplete="off"></textarea>
-      <div class="chips" id="chips">
-        <div class="chip active" data-tag="progress">PROGRESS</div>
-        <div class="chip" data-tag="ai">AI</div>
-        <div class="chip" data-tag="gap">MANUAL PAIN</div>
-        <div class="chip" data-tag="values">VALUES</div>
-        <div class="chip" data-tag="next">NEXT WEEK</div>
+      <div class="stickers" id="pickers">
+        <div class="sticker t-progress on" data-tag="progress">progress</div>
+        <div class="sticker t-ai"          data-tag="ai">ai</div>
+        <div class="sticker t-gap"         data-tag="gap">manual pain</div>
+        <div class="sticker t-values"      data-tag="values">values</div>
+        <div class="sticker t-next"        data-tag="next">next week</div>
       </div>
-      <button id="save-btn">[ SAVE ENTRY ]</button>
+      <button class="primary" id="save-btn">log it</button>
+      <div id="past-note">
+        <span>lands on this week, not the one you're reading</span>
+        <button class="quiet" id="jump-btn">go there</button>
+      </div>
     </div>
 
-    <div class="panel" data-title="[ THIS WEEK ]">
-      <div id="entries"><div class="empty">loading...</div></div>
+    <div class="panel">
+      <h2 id="entries-title">the week</h2>
+      <div id="entries"><div class="empty">loading…</div></div>
     </div>
   </section>
 
-  <!-- ── WEEKLY VIEW ── -->
+  <!-- ── DRAFT ── -->
   <section class="view" id="view-weekly">
-    <div class="panel" data-title="[ WEEKLY UPDATE ]">
-      <div class="meta" id="draft-meta">not generated yet</div>
-      <div id="draft-text">Tap REGENERATE to build this week's draft.</div>
-      <div class="row" style="margin-top:12px">
-        <button id="copy-btn">[ COPY ]</button>
-        <button id="regen-btn" class="ghost">[ REGENERATE ]</button>
+    <div class="panel wob">
+      <h2>weekly update</h2>
+      <div class="meta" id="draft-meta">…</div>
+      <div id="draft-text" class="note">…</div>
+      <div class="row" style="margin-top:14px">
+        <button id="copy-btn">copy</button>
+        <button id="regen-btn" class="quiet">regenerate</button>
       </div>
     </div>
   </section>
@@ -368,6 +502,16 @@ function apiUrl(path, params = {}) {
   return u.toString();
 }
 
+// ── STATE ──
+// `week` is the ISO key both views are pinned to. It starts as whatever the URL
+// asked for, or null to let the server resolve it (which is what makes a Monday
+// land on the week that actually has notes in it).
+const state = {
+  week: new URLSearchParams(location.search).get('week') || null,
+  meta: null,
+  draftWeek: false,  // the week the draft pane shows; false = never loaded
+};
+
 let toastTimer = null;
 function toast(msg, isError = false) {
   const el = document.getElementById('toast');
@@ -377,6 +521,21 @@ function toast(msg, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── THEME ──
+const themeBtn = document.getElementById('theme-btn');
+themeBtn.addEventListener('click', () => {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const now = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
+  const next = now === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('standup-theme', next); } catch (e) { /* private mode */ }
+});
 
 // ── TABS ──
 document.querySelectorAll('.tab').forEach(tab => {
@@ -388,20 +547,130 @@ function switchView(name) {
     t.classList.toggle('active', t.dataset.view === name));
   document.querySelectorAll('.view').forEach(v =>
     v.classList.toggle('active', v.id === 'view-' + name));
-  if (name === 'weekly' && !draftLoaded) loadDraft(false);
+  // Lazy, and re-fetched whenever the draft on screen is for a different week.
+  if (name === 'weekly' && state.draftWeek !== state.week) loadDraft(false);
 }
 
-// ── TAG CHIPS ──
+function weeklyVisible() {
+  return document.getElementById('view-weekly').classList.contains('active');
+}
+
+// ── WEEK NAVIGATOR ──
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+
+function goToWeek(key) {
+  if (!key) return;
+  state.week = key;
+  state.draftWeek = null;   // the draft pane is now stale
+  loadEntries();
+  if (weeklyVisible()) loadDraft(false);
+}
+
+prevBtn.addEventListener('click', () => goToWeek(state.meta && state.meta.prev_week));
+nextBtn.addEventListener('click', () => goToWeek(state.meta && state.meta.next_week));
+document.getElementById('jump-btn').addEventListener('click', () =>
+  goToWeek(state.meta && state.meta.current_week));
+
+// Monday 12:00 of the week containing `iso`, so week arithmetic can't be
+// knocked off by a DST hour.
+function mondayOf(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+function renderWeek(data) {
+  const back = Math.round(
+    (mondayOf(data.today) - mondayOf(data.week_start)) / 604800000);
+  const name = back === 0 ? 'this week'
+             : back === 1 ? 'last week'
+             : back > 0   ? back + ' weeks ago'
+             : 'ahead';
+
+  document.getElementById('week-name').textContent = name;
+
+  const notes = data.entry_count === 1 ? '1 note' : data.entry_count + ' notes';
+  let sub = data.range + ' · ' + notes;
+  // Say so out loud when the server picked the week, rather than quietly
+  // showing one thing under a header that implies another.
+  if (data.resolved === 'latest') sub = 'nothing logged this week yet · ' + sub;
+  document.getElementById('week-sub').textContent = sub;
+
+  prevBtn.disabled = !data.prev_week;
+  nextBtn.disabled = !data.next_week;
+  document.body.classList.toggle('past', !data.is_current);
+  document.getElementById('entries-title').textContent =
+    data.is_current ? 'the week' : 'that week';
+
+  // Keep the URL honest so a reload or a shared link stays on this week.
+  const u = new URL(location.href);
+  u.searchParams.set('week', data.week);
+  history.replaceState(null, '', u.toString());
+}
+
+// ── ENTRIES ──
+const DAY_FMT = { weekday: 'long', month: 'short', day: 'numeric' };
+
+async function loadEntries() {
+  const box = document.getElementById('entries');
+  try {
+    const resp = await fetch(apiUrl('/standup/entries', state.week ? { week: state.week } : {}));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    state.meta = data;
+    state.week = data.week;   // adopt whatever the server resolved to
+    renderWeek(data);
+
+    if (!data.entries.length) {
+      box.innerHTML = '<div class="empty">' +
+        (data.is_current ? 'nothing here yet — that&rsquo;s allowed.' : 'a quiet week.') +
+        '</div>';
+      return;
+    }
+
+    // Newest day first, so today is always at the top on mobile.
+    const byDay = new Map();
+    for (const e of data.entries) {
+      const day = e.ts.slice(0, 10);
+      if (!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day).push(e);
+    }
+
+    let html = '';
+    for (const day of [...byDay.keys()].sort().reverse()) {
+      // Noon anchor, so the label can't slip a day across a timezone.
+      const label = new Date(day + 'T12:00:00').toLocaleDateString(undefined, DAY_FMT);
+      html += `<div class="day">${escapeHtml(label)}</div>`;
+      for (const e of byDay.get(day).reverse()) {
+        html += `<div class="entry">
+          <div class="bubble">
+            <div class="txt">${escapeHtml(e.text)}</div>
+            <button class="del" data-id="${escapeHtml(e.id)}" title="delete">&times;</button>
+          </div>
+          <span class="sticker t-${escapeHtml(e.tag)}">${escapeHtml(e.tag)}</span>
+        </div>`;
+      }
+    }
+    box.innerHTML = html;
+    box.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', () => removeEntry(btn.dataset.id));
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="empty">couldn&rsquo;t load: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// ── SAVE ──
 let currentTag = 'progress';
-document.querySelectorAll('.chip').forEach(chip => {
+document.querySelectorAll('#pickers .sticker').forEach(chip => {
   chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
+    document.querySelectorAll('#pickers .sticker').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
     currentTag = chip.dataset.tag;
   });
 });
 
-// ── SAVE ──
 const noteEl = document.getElementById('note');
 const saveBtn = document.getElementById('save-btn');
 
@@ -418,6 +687,9 @@ async function saveEntry() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     noteEl.value = '';
     toast('logged');
+    // A note always lands on today, so show the week it landed in.
+    state.week = state.meta ? state.meta.current_week : null;
+    state.draftWeek = null;
     loadEntries();
   } catch (e) {
     toast('save failed: ' + e.message, true);
@@ -432,57 +704,6 @@ noteEl.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveEntry();
 });
 
-// ── ENTRIES ──
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-const DAY_FMT = { weekday: 'long', month: 'short', day: 'numeric' };
-
-async function loadEntries() {
-  const box = document.getElementById('entries');
-  try {
-    const resp = await fetch(apiUrl('/standup/entries'));
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    document.getElementById('week-label').textContent =
-      'WEEK OF ' + data.week_start;
-
-    if (!data.entries.length) {
-      box.innerHTML = '<div class="empty">nothing logged yet this week</div>';
-      return;
-    }
-
-    // Newest day first, so today is always at the top on mobile.
-    const byDay = new Map();
-    for (const e of data.entries) {
-      const day = e.ts.slice(0, 10);
-      if (!byDay.has(day)) byDay.set(day, []);
-      byDay.get(day).push(e);
-    }
-
-    let html = '';
-    for (const day of [...byDay.keys()].sort().reverse()) {
-      const label = new Date(day + 'T12:00:00').toLocaleDateString(undefined, DAY_FMT);
-      html += `<div class="day-head">${label.toUpperCase()}</div>`;
-      for (const e of byDay.get(day).reverse()) {
-        html += `<div class="entry">
-          <span class="tag tag-${e.tag}">${e.tag.toUpperCase()}</span>
-          <span class="txt">${escapeHtml(e.text)}</span>
-          <span class="del" data-id="${e.id}">&times;</span>
-        </div>`;
-      }
-    }
-    box.innerHTML = html;
-    box.querySelectorAll('.del').forEach(btn => {
-      btn.addEventListener('click', () => removeEntry(btn.dataset.id));
-    });
-  } catch (e) {
-    box.innerHTML = `<div class="empty">load failed: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
 async function removeEntry(id) {
   try {
     const resp = await fetch(apiUrl('/standup/delete'), {
@@ -492,6 +713,7 @@ async function removeEntry(id) {
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     toast('deleted');
+    state.draftWeek = null;
     loadEntries();
   } catch (e) {
     toast('delete failed', true);
@@ -499,36 +721,65 @@ async function removeEntry(id) {
 }
 
 // ── DRAFT ──
-let draftLoaded = false;
 const draftTextEl = document.getElementById('draft-text');
+const draftMetaEl = document.getElementById('draft-meta');
 const regenBtn = document.getElementById('regen-btn');
+const copyBtn = document.getElementById('copy-btn');
+
+function draftNote(msg) {
+  draftTextEl.classList.add('note');
+  draftTextEl.textContent = msg;
+}
 
 async function loadDraft(refresh) {
   regenBtn.disabled = true;
-  draftTextEl.textContent = refresh ? 'generating...' : 'loading...';
+  copyBtn.disabled = true;
+  draftNote(refresh ? 'writing it up…' : 'loading…');
+  draftMetaEl.textContent = '';
   try {
-    const resp = await fetch(apiUrl('/standup/weekly', refresh ? { refresh: 1 } : {}));
+    const params = {};
+    if (state.week) params.week = state.week;
+    if (refresh) params.refresh = 1;
+    const resp = await fetch(apiUrl('/standup/weekly', params));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const d = await resp.json();
+    state.draftWeek = d.week;
+
+    if (d.status === 'empty') {
+      draftNote('nothing was logged that week.');
+      draftMetaEl.textContent = '';
+      regenBtn.textContent = 'regenerate';
+      return;
+    }
+    if (d.status === 'not-generated') {
+      // Stepping back through history is free; building costs a model call.
+      draftNote('no draft for this week yet.');
+      draftMetaEl.innerHTML = `<b>${d.entry_count}</b> notes waiting`;
+      regenBtn.textContent = 'build it';
+      regenBtn.disabled = false;
+      return;
+    }
+
+    draftTextEl.classList.remove('note');
     draftTextEl.textContent = d.text;
-    document.getElementById('draft-meta').innerHTML =
-      `week of <b>${d.week_start}</b> &middot; <b>${d.entry_count}</b> entries &middot; ` +
-      `via <b>${d.generated_by}</b>`;
-    draftLoaded = true;
+    draftMetaEl.innerHTML =
+      `<b>${d.entry_count}</b> notes · via <b>${escapeHtml(String(d.generated_by))}</b>`;
+    regenBtn.textContent = 'regenerate';
+    regenBtn.disabled = false;
+    copyBtn.disabled = false;
   } catch (e) {
-    draftTextEl.textContent = 'generation failed: ' + e.message;
-  } finally {
+    draftNote('couldn’t build it: ' + e.message);
     regenBtn.disabled = false;
   }
 }
 
 regenBtn.addEventListener('click', () => loadDraft(true));
 
-document.getElementById('copy-btn').addEventListener('click', async () => {
+copyBtn.addEventListener('click', async () => {
   const text = draftTextEl.textContent;
   try {
     await navigator.clipboard.writeText(text);
-    toast('copied to clipboard');
+    toast('copied');
   } catch (e) {
     // Clipboard API needs a secure context; fall back to a manual selection.
     const range = document.createRange();

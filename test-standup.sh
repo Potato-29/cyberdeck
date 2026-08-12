@@ -49,7 +49,7 @@ echo "auth gate"
 code "no token is rejected"    401 "$BASE/standup"
 code "bad token is rejected"   401 "$BASE/standup?token=nope"
 code "good token is accepted"  200 "$BASE/standup?token=$TOKEN"
-body "page is the log UI"      "STANDUP LOG" "$BASE/standup?token=$TOKEN"
+body "page is the log UI"      "what did you do?" "$BASE/standup?token=$TOKEN"
 
 echo
 echo "logging"
