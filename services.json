@@ -71,20 +71,6 @@
     "boot": true
   },
   {
-    "key": "battery_alert",
-    "label": "Battery Alert",
-    "category": "termux",
-    "check": {
-      "mechanism": "tmux",
-      "value": "battery"
-    },
-    "start": "tmux new-session -d -s battery 'bash ~/cyberdeck/battery_alert.sh'",
-    "stop": "tmux kill-session -t battery",
-    "tmux_session": "battery",
-    "alert": false,
-    "boot": false
-  },
-  {
     "key": "webhook",
     "label": "Webhook",
     "category": "termux",
