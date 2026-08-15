@@ -102,7 +102,7 @@
     "key": "ideas",
     "label": "Ideas",
     "category": "termux",
-    "_note": "Idea board on port 2124, served at ideas.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/ideas.db — it does not use WEBHOOK_TOKEN. See docs/ideas.md.",
+    "_note": "Idea board on port 2124, served at ideas.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/ideas.db \u2014 it does not use WEBHOOK_TOKEN. See docs/ideas.md.",
     "check": {
       "mechanism": "tmux",
       "value": "ideas"
@@ -117,7 +117,7 @@
     "key": "crumbs",
     "label": "Crumbs",
     "category": "termux",
-    "_note": "Crumb Notes on port 2126, served at crumbs.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/crumbs.db — it does not use WEBHOOK_TOKEN. See docs/crumbs.md.",
+    "_note": "Crumb Notes on port 2126, served at crumbs.prayas.space. Runs its own Flask app with per-user accounts and a SQLite DB at ~/crumbs.db \u2014 it does not use WEBHOOK_TOKEN. See docs/crumbs.md.",
     "check": {
       "mechanism": "tmux",
       "value": "crumbs"
@@ -146,7 +146,7 @@
     "key": "buddy",
     "label": "Desk Buddy",
     "category": "proot",
-    "_note": "Voice-assistant broker on port 2125. Runs INSIDE proot Ubuntu (glibc) because openWakeWord's ML runtime ships only glibc aarch64 wheels — Termux's bionic libc can't load them. Binds the Termux ~/cyberdeck into proot so it runs the same repo copy; PULSE_SERVER points at the Termux PulseAudio bridge for speaker playback. Checked via tmux, not pgrep — Android's /proc hides processes. See docs/deskbuddy.md.",
+    "_note": "Voice-assistant broker on port 2125. Runs INSIDE proot Ubuntu (glibc) because openWakeWord's ML runtime ships only glibc aarch64 wheels \u2014 Termux's bionic libc can't load them. Binds the Termux ~/cyberdeck into proot so it runs the same repo copy; PULSE_SERVER points at the Termux PulseAudio bridge for speaker playback. Checked via tmux, not pgrep \u2014 Android's /proc hides processes. See docs/deskbuddy.md.",
     "check": {
       "mechanism": "tmux",
       "value": "buddy"
@@ -154,7 +154,7 @@
     "start": "tmux new-session -d -s buddy 'proot-distro login ubuntu --bind /data/data/com.termux/files/home/cyberdeck:/root/cyberdeck -- bash -c \"cd /root/cyberdeck/deskbuddy && PULSE_SERVER=tcp:127.0.0.1:4713 python3 broker.py\"'",
     "stop": "tmux kill-session -t buddy",
     "tmux_session": "buddy",
-    "alert": true,
+    "alert": false,
     "boot": true
   },
   {
