@@ -31,37 +31,51 @@ go `listening` and the broker captures until you stop talking → `thinking` whi
 Groq transcribes + answers → `speaking` while the reply plays on the phone → back
 to `idle`.
 
+**Work log routing.** After STT, `worklog.py` classifies the transcript. Notes,
+context switches, breadcrumbs and "where was I" go to the
+[work log](work-log.md) and get a short spoken confirmation; anything that reads
+as a question falls through to the assistant exactly as before. Set
+`BUDDY_WORKLOG=0` to turn it off. See [Work log → Voice capture](work-log.md).
+
 ## Display states
 
-The 128×64 OLED is split into a **status band** (rows 0–15) and the **eyes**
-(rows 16–63). Two channels, because eye height on its own was unreadable from a
-desk away — every state gets a different silhouette *and* a different band motif.
+The eyes are drawn by the **FluxGarage RoboEyes** library (install it from
+Library Manager), which handles tweening, blinking and idle roaming. It owns the
+whole 128×64 buffer — its `update()` calls `clearDisplay()` and `display()`
+itself — so **nothing else may draw to the screen**.
 
-| State | Eyes | Status band |
-| --- | --- | --- |
-| `idle` | small bars (h=10), slow bob, blink every ~3.2s | *empty* |
-| `listening` | widest (h=30+), swell with your voice | live VU meter, centre-out |
-| `thinking` | narrow slits (h=6), raised | three dots bouncing in sequence |
-| `speaking` | domes — flat-bottomed, curved up | travelling sine wave |
-| `error` | X eyes | dashed blocks |
+| State | Eye behaviour |
+| --- | --- |
+| `idle` | slightly lidded, auto-blink every ~3–5s, eyes wandering the room |
+| `listening` | wide open, centred, curiosity on, rarely blinks — visibly locked on |
+| `thinking` | `TIRED` lids, sweat drop, eyes darting, one confused shake |
+| `speaking` | `HAPPY` lids with a vertical bob standing in for a mouth |
+| `error` | `ANGRY` lids with horizontal flicker |
 
-On the **dual-colour** SSD1306 modules the top 16 rows have a yellow filter
-bonded to the glass and the rest are blue — so the band also reads as a colour
-change. This is fixed in hardware; the SSD1306 is 1-bit and `SSD1306_WHITE` just
-means "pixel on". Nothing outside rows 0–15 can ever be yellow, which is why all
-band drawing must stay above y=16.
+RoboEyes' setters are **latches**, not per-frame calls, and
+`anim_confused()`/`blink()` are one-shots. So `applyEyeState()` runs once per
+state transition (driven from `loop()` by comparing `buddyState` to `eyeState`)
+and resets every latch at the top — otherwise `thinking`'s sweat drops would
+persist into `speaking`. Never call the setters from inside the draw path.
 
-The `listening` meter is driven by the real mic level computed in `pumpAudio()`.
-If it barely moves or pins at full, tune `MIC_LEVEL_FULL` in the sketch.
+`EYE_FPS` is deliberately low (25). A full 128×64 push over I2C is ~23 ms at
+400 kHz, so the framerate competes directly with `pumpAudio()` for loop time —
+RoboEyes' own examples use 100 fps, which this sketch cannot afford.
 
-`deskbuddy/dashboard.html` renders a preview of all five states on a canvas and
-duplicates this geometry — change one, change the other.
+Note the SSD1306 is **1-bit**: `SSD1306_WHITE` means "pixel on", not a colour. On
+the dual-colour modules the top 16 rows have a yellow filter bonded to the glass
+and the rest are blue — fixed in hardware, and not something the firmware can
+change.
+
+> `deskbuddy/dashboard.html`'s canvas preview still draws the older hand-rolled
+> eyes and no longer matches the device.
 
 ## Files
 
 | File                                   | Role                                                                |
 | -------------------------------------- | ------------------------------------------------------------------- |
 | `deskbuddy/broker.py`                  | aiohttp HTTP + WebSocket on port 2125; wake word + Groq STT/LLM/TTS |
+| `deskbuddy/worklog.py`                 | Intent routing — sends notes/switches/breadcrumbs to the work log   |
 | `deskbuddy/dashboard.html`             | HUD: live state, eyes preview, a `/say` test box                    |
 | `deskbuddy/firmware/deskbuddy/deskbuddy.ino`     | ESP32 sketch — I2S mic streaming + OLED eyes                        |
 | `deskbuddy/firmware/deskbuddy/secrets.h.example` | Wi-Fi + broker config template (`secrets.h` is gitignored)          |

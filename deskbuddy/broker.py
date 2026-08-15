@@ -57,6 +57,10 @@ def load_env_file(path: Path) -> None:
 # .env lives at the repo root, one level up from deskbuddy/
 load_env_file(Path(__file__).resolve().parent.parent / ".env")
 
+# Work log routing — imported after the .env load, since worklog.py reads its
+# config at module level (same rule as standup.py in webhook_new.py).
+import worklog  # noqa: E402
+
 # ── Config ──────────────────────────────────────────────────────────────────
 PORT = int(os.environ.get("BUDDY_PORT", "2125"))
 
@@ -282,23 +286,32 @@ def append_turn(transcript: str, reply: str) -> None:
 
 
 # ── Turn orchestration ──────────────────────────────────────────────────────
+async def _speak(text: str) -> None:
+    """TTS -> play, no LLM. Used for work log confirmations, which are already
+    written; sending them through the model would only add latency and drift."""
+    global last_reply
+    loop = asyncio.get_event_loop()
+    last_reply = text
+    print(f"[buddy] say: {text}")
+    await set_state("speaking")
+    audio = await loop.run_in_executor(None, groq_tts, text)
+    await loop.run_in_executor(None, play_audio, audio)
+
+
 async def _respond(user_text: str) -> None:
     """LLM -> TTS -> play. Assumes state is already 'thinking' and `processing`."""
-    global last_transcript, last_reply
+    global last_transcript
     loop = asyncio.get_event_loop()
     last_transcript = user_text
     reply = await loop.run_in_executor(None, groq_llm, user_text)
-    last_reply = reply
     print(f"[buddy] reply: {reply}")
-    await set_state("speaking")
-    audio = await loop.run_in_executor(None, groq_tts, reply)
-    await loop.run_in_executor(None, play_audio, audio)
+    await _speak(reply)
     append_turn(user_text, reply)
 
 
 async def run_turn(pcm: bytes) -> None:
-    """Full loop from captured mic audio: STT -> LLM -> TTS -> play."""
-    global processing
+    """Full loop from captured mic audio: STT -> work log or LLM -> TTS -> play."""
+    global processing, last_transcript
     if processing:
         return
     processing = True
@@ -310,6 +323,15 @@ async def run_turn(pcm: bytes) -> None:
         if not text:
             await set_state("error")
             await asyncio.sleep(0.8)
+            return
+        last_transcript = text
+        # Work log first: if this utterance was a note, a context switch or a
+        # "where was I", handle it and speak a short confirmation. Anything the
+        # router calls a question falls through to the assistant unchanged.
+        spoken = await loop.run_in_executor(None, worklog.handle, text)
+        if spoken:
+            await _speak(spoken)
+            append_turn(text, spoken)
             return
         await _respond(text)
     except Exception as exc:  # noqa: BLE001

@@ -24,12 +24,12 @@ maintenance, and it gets abandoned.
 ```
 Work tab      ──► POST /api/notes  {text}          ──┐
 (browser)         GET  /api/notes?date=&ctx=         │
-                  GET  /api/search?q=                │
-                                                     ├──► SQLite  ~/work-logs.sqlite
-ESP32 device  ──► POST /api/notes  (audio stream)  ──┤    notes / contexts / breadcrumbs
-(touch pads)      POST /api/contexts/:id/switch      │    + FTS5 index on notes.raw_text
-                  POST /api/contexts/:id/breadcrumb  │
-                  GET  /api/today   (idle screen)  ──┘
+                  GET  /api/search?q=                ├──► SQLite  ~/work-logs.sqlite
+                                                     │    notes / contexts / breadcrumbs
+"hey jarvis"  ──► deskbuddy ──► Whisper ──► text   ──┘    + FTS5 on notes.raw_text
+(INMP441 mic)     └─ worklog.py routes the transcript:
+                       note / breadcrumb / switch / recall ──► the work log
+                       question                            ──► the assistant
 
 Friday        ──► GET /api/friday/draft   reads the week, writes nothing back
                     └── grouped by context ──► Groq ──► five sections
@@ -83,7 +83,48 @@ because it reads the token off its own URL.
 | GET | `/work?token=` | The Work tab |
 | GET | `/health` | No auth, for the status checker |
 
+## Voice capture
+
+There is no separate work-log firmware. [Desk Buddy](deskbuddy.md) already has
+the mic, the "hey jarvis" wake word, and Whisper — so it does the listening and
+the work log only ever receives **text**.
+
+`deskbuddy/worklog.py` hooks into `broker.run_turn()` immediately after STT.
+Every transcript gets classified once by a small fast model
+(`BUDDY_INTENT_MODEL`, default `llama-3.1-8b-instant`, temperature 0) into one
+of five intents:
+
+| Say | Intent | What happens |
+| --- | --- | --- |
+| "the migration rollback needs a dry-run flag" | `note` | Logged to the active context → *"Logged to ruby."* |
+| "log that I fixed the nil guard" | `note` | Command verb stripped, stored as a plain statement |
+| "switch to platform" | `switch` | Switches, then **speaks the breadcrumb back** |
+| "I stopped halfway through the serializer" | `breadcrumb` | Saved against the active context |
+| "where was I" | `recall` | Speaks where you left off |
+| "how do I reverse a linked list" | `question` | Falls through to jarvis, unchanged |
+
+A statement about your own work is a note by default; you only need a command
+verb when you want to be explicit. Nothing about the existing assistant changes —
+anything classified as a question takes exactly the path it did before.
+
+If the classifier is unreachable, a local keyword heuristic takes over. It is
+biased toward `note`: when Groq is down, STT has usually failed too, and a
+stray question filed as a note is one tap to delete, whereas a note that
+silently became a chat reply is gone. Every confirmation is spoken, so a
+misroute is immediately audible.
+
+Set `BUDDY_WORKLOG=0` to disable the routing entirely and leave jarvis as it was.
+
+> `worklog.py` runs inside proot while the work log runs in Termux.
+> `proot-distro` does not create a network namespace, so `127.0.0.1:2127`
+> reaches across — the same reason `PULSE_SERVER=tcp:127.0.0.1:4713` already
+> works for playback.
+
 ### The audio path
+
+Unused by the voice flow above, since deskbuddy transcribes before the work log
+ever sees the utterance. It exists for a future direct-from-device path.
+
 
 `POST /api/notes` with `Content-Type: audio/L16;rate=16000` (raw PCM from the
 device) or `audio/wav` (a complete file). The body is **streamed**, not
