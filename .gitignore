@@ -3,5 +3,12 @@ __pycache__/
 dashboard.pipboy-backup.html
 ideas/web/node_modules/
 ideas/web/tsconfig.tsbuildinfo
-# ideas/web/dist/ is deliberately committed — the phone has no node toolchain.
+# ideas/web/dist/ is deliberately committed — Termux has node, but no
+# build toolchain is wanted on the phone for a frontend that rarely changes.
 deskbuddy/firmware/deskbuddy/secrets.h
+
+work-log-tool/node_modules/
+# Local test artifacts. The real DB and audio live outside the repo
+# (~/work-logs.sqlite, ~/work-log-audio/) so a git clean cannot delete the log.
+work-log-tool/.testdb/
+work-log-tool/work-logs.sqlite*

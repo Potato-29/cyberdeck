@@ -26,6 +26,8 @@ The most collision-prone thing in the repo. Check here before picking one.
 | 2123 | `standup.py` standalone (testing only) | phone |
 | 2124 | `ideas/server.py` | phone |
 | 2125 | `deskbuddy/broker.py` — voice assistant broker (proot) | phone |
+| 2126 | `crumbs` — Crumb Notes (proot, `node build`) | phone |
+| 2127 | `work-log-tool/server.js` — work log capture | phone |
 | 8000 | `forza/forza_listener.py` (UDP 5300 in) | phone |
 | 8085 | LibreHardwareMonitor telemetry | **PC** |
 | 8086 | `pc-deck-agent.py` app launcher | **PC** |
@@ -48,6 +50,11 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
 - **`dashboard.html`** — 1400-line single-file cyberdeck HUD, served by `send_file`.
 - **`forza/`** — standalone aiohttp service (HTTP + WebSocket) for the Forza telemetry HUD.
 - **`ideas/`** — standalone idea board. **The exception to most rules below.**
+- **`work-log-tool/`** — work log capture. **The only Node service in the tree**
+  and the second exception to "no package manager" (one dep, `express`; the
+  DB is the builtin `node:sqlite`, so nothing native compiles). One backend,
+  two clients: a standalone HUD-themed page at `/work` and the ESP32 desk
+  device, both POSTing the same `/api/*` surface. See [docs/work-log.md](docs/work-log.md).
 - **`sketch_may1a/`** — ESP32 Arduino firmware for the cat feeder.
 - **`deskbuddy/`** — "hey jarvis" voice assistant. ESP32 firmware (INMP441 mic +
   SSD1306 eyes) streams audio to a Groq broker (`broker.py`, aiohttp on 2125, in

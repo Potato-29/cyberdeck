@@ -31,6 +31,32 @@ go `listening` and the broker captures until you stop talking → `thinking` whi
 Groq transcribes + answers → `speaking` while the reply plays on the phone → back
 to `idle`.
 
+## Display states
+
+The 128×64 OLED is split into a **status band** (rows 0–15) and the **eyes**
+(rows 16–63). Two channels, because eye height on its own was unreadable from a
+desk away — every state gets a different silhouette *and* a different band motif.
+
+| State | Eyes | Status band |
+| --- | --- | --- |
+| `idle` | small bars (h=10), slow bob, blink every ~3.2s | *empty* |
+| `listening` | widest (h=30+), swell with your voice | live VU meter, centre-out |
+| `thinking` | narrow slits (h=6), raised | three dots bouncing in sequence |
+| `speaking` | domes — flat-bottomed, curved up | travelling sine wave |
+| `error` | X eyes | dashed blocks |
+
+On the **dual-colour** SSD1306 modules the top 16 rows have a yellow filter
+bonded to the glass and the rest are blue — so the band also reads as a colour
+change. This is fixed in hardware; the SSD1306 is 1-bit and `SSD1306_WHITE` just
+means "pixel on". Nothing outside rows 0–15 can ever be yellow, which is why all
+band drawing must stay above y=16.
+
+The `listening` meter is driven by the real mic level computed in `pumpAudio()`.
+If it barely moves or pins at full, tune `MIC_LEVEL_FULL` in the sketch.
+
+`deskbuddy/dashboard.html` renders a preview of all five states on a canvas and
+duplicates this geometry — change one, change the other.
+
 ## Files
 
 | File                                   | Role                                                                |
@@ -46,7 +72,7 @@ to `idle`.
 | Signal             | ESP32 pin       | Notes                                                   |
 | ------------------ | --------------- | ------------------------------------------------------- |
 | INMP441 SCK (BCLK) | GPIO14          | I2S bit clock                                           |
-| INMP441 WS (LRCL)  | GPIO15          | I2S word select                                         |
+| INMP441 WS (LRCL)  | GPIO27          | I2S word select                                         |
 | INMP441 SD (DOUT)  | GPIO32          | I2S data in                                             |
 | INMP441 L/R        | GND             | selects the left channel                                |
 | INMP441 VDD / GND  | 3V3 / GND       |                                                         |
@@ -158,7 +184,7 @@ LAN-only, no auth — like `forza`. It is not exposed through the Cloudflare tun
 | `error: externally-managed-environment` | Ubuntu PEP 668. Use `pip install --break-system-packages …` (matches the deck's global-pip convention) or a venv. openWakeWord is **PyPI-only** — there is no `python3-openwakeword` apt package |
 | `wake word DISABLED` on boot            | `openwakeword` not importable in proot — install per Setup step 1 |
 | `oww init failed: unexpected keyword 'wakeword_models'` | pip installed an ancient openWakeWord because the latest's `tflite-runtime` dep has no wheel on newer Python. Fix: `python3 -m pip install --break-system-packages --no-deps --upgrade "openwakeword>=0.6.0"` then `... numpy onnxruntime scipy tqdm requests`; keep `BUDDY_WAKE_FRAMEWORK=onnx`                                            |
-| Never wakes                             | Mic gain too low (`MIC_GAIN` in `secrets.h`) or threshold too high; watch the broker log for wake scores and tune                                                                                |
+| Never wakes                             | Mic gain too low (`MIC_GAIN_SHIFT` in `deskbuddy.ino` — raise by 1) or threshold too high; watch the broker log for wake scores and tune. To check the mic itself in isolation, flash `work-log-tool/firmware/mic_test` and pull a WAV |
 | Wakes constantly                        | Raise `BUDDY_WAKE_THRESHOLD` (e.g. 0.6–0.7)                                                                                                                                                      |
 | Cuts off mid-sentence                   | Trailing-silence too eager — raise `END_SILENCE_FRAMES` in `broker.py`                                                                                                                           |
 | `no audio player succeeded`             | PulseAudio bridge not running, or `PULSE_SERVER` unset — see Setup step 2                                                                                                                        |

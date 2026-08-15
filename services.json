@@ -146,7 +146,7 @@
     "key": "buddy",
     "label": "Desk Buddy",
     "category": "proot",
-    "_note": "Voice-assistant broker on port 2125. Runs INSIDE proot Ubuntu (glibc) because openWakeWord's ML runtime ships only glibc aarch64 wheels \u2014 Termux's bionic libc can't load them. Binds the Termux ~/cyberdeck into proot so it runs the same repo copy; PULSE_SERVER points at the Termux PulseAudio bridge for speaker playback. Checked via tmux, not pgrep \u2014 Android's /proc hides processes. See docs/deskbuddy.md.",
+    "_note": "Voice-assistant broker on port 2125. Runs INSIDE proot Ubuntu (glibc) because openWakeWord's ML runtime ships only glibc aarch64 wheels — Termux's bionic libc can't load them. Binds the Termux ~/cyberdeck into proot so it runs the same repo copy; PULSE_SERVER points at the Termux PulseAudio bridge for speaker playback. Checked via tmux, not pgrep — Android's /proc hides processes. See docs/deskbuddy.md.",
     "check": {
       "mechanism": "tmux",
       "value": "buddy"
@@ -154,7 +154,22 @@
     "start": "tmux new-session -d -s buddy 'proot-distro login ubuntu --bind /data/data/com.termux/files/home/cyberdeck:/root/cyberdeck -- bash -c \"cd /root/cyberdeck/deskbuddy && PULSE_SERVER=tcp:127.0.0.1:4713 python3 broker.py\"'",
     "stop": "tmux kill-session -t buddy",
     "tmux_session": "buddy",
-    "alert": false,
+    "alert": true,
+    "boot": true
+  },
+  {
+    "key": "worklog",
+    "label": "Work Log",
+    "category": "termux",
+    "_note": "Work log capture on port 2127, served at work.prayas.space. Node/Express using the builtin node:sqlite — no native deps. Runs in Termux, NOT proot: proot's $HOME is /root, so ~/cyberdeck there is a different, stale checkout. DB at ~/work-logs.sqlite, audio WAVs in ~/work-log-audio/. Uses WEBHOOK_TOKEN. See docs/work-log.md.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "worklog"
+    },
+    "start": "tmux new-session -d -s worklog 'node ~/cyberdeck/work-log-tool/server.js'",
+    "stop": "tmux kill-session -t worklog",
+    "tmux_session": "worklog",
+    "alert": true,
     "boot": true
   },
   {
