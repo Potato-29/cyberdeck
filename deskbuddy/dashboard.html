@@ -107,6 +107,11 @@
   const cv = document.getElementById("eyes"), ctx = cv.getContext("2d");
   let state = "idle", t0 = performance.now();
 
+  // Mirrors drawEyes() in firmware/deskbuddy/deskbuddy.ino — keep the two in
+  // step. Rows 0..15 are the status band, drawn amber here because on the
+  // dual-colour SSD1306 that strip is physically yellow; eyes live below it.
+  const EYE_CY = 40, BAND = "#ffd24a";
+
   function eye(x, cy, w, h) {
     const r = Math.min(8, h / 2);
     ctx.beginPath();
@@ -119,44 +124,82 @@
     ctx.fill();
   }
 
+  function domeEye(x, cy, w, h) {           // flat-bottomed half — "speaking"
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x - 1, cy - h, w + 2, h); ctx.clip();
+    eye(x, cy, w, h);
+    ctx.restore();
+  }
+
+  function bandVU(level) {
+    const segs = Math.round(level * 8);
+    for (let i = 0; i < segs && i < 8; i++) {
+      const hgt = 4 + i;
+      ctx.fillRect(66 + i * 7, 13 - hgt, 5, hgt);
+      ctx.fillRect(57 - i * 7, 13 - hgt, 5, hgt);
+    }
+  }
+
+  function bandDots(t) {
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(52 + i * 12, 8 - Math.sin(t * 3 - i * 0.6) * 4, 3, 0, 7);
+      ctx.fill();
+    }
+  }
+
+  function bandWave(t) {
+    for (let x = 0; x < 128; x++)
+      ctx.fillRect(x, Math.round(8 + Math.sin(x * 0.18 - t * 9) * 5), 1, 2);
+  }
+
+  // The browser has no mic — the preview meter is synthetic, just to show the
+  // shape of the animation. On the device this is the real input level.
+  let fakeLevel = 0;
+
   function draw(now) {
     const t = (now - t0) / 1000;
     ctx.fillStyle = "#05080a"; ctx.fillRect(0, 0, 128, 64);
     let color = "#35e0e0";
     if (state === "thinking") color = "#ffb454";
     if (state === "error") color = "#ff5062";
-    ctx.fillStyle = color;
-    ctx.shadowColor = color; ctx.shadowBlur = 8;
 
     const lx = 26, rx = 78, w = 24;
-    let cyL = 32, cyR = 32, h = 26;
+    let cyL = EYE_CY, cyR = EYE_CY, h = 24, dome = false;
+
+    ctx.fillStyle = BAND; ctx.shadowColor = BAND; ctx.shadowBlur = 8;
 
     if (state === "idle") {
-      const blink = (t % 3.2) > 3.0 ? 3 : 26;   // quick blink every ~3.2s
-      h = blink; cyL = cyR = 32 + Math.sin(t * 0.8) * 2;
+      // smallest eyes, empty band — idle is defined by what it lacks
+      h = (t % 3.2) > 3.0 ? 2 : 10;
+      cyL = cyR = EYE_CY + Math.sin(t * 0.8) * 2;
     } else if (state === "listening") {
-      h = 30 + Math.sin(t * 6) * 3;              // wide, alert, gentle pulse
+      fakeLevel += (Math.random() * 0.9 + 0.1 - fakeLevel) * 0.15;
+      bandVU(fakeLevel);
+      h = 30 + fakeLevel * 6;                    // widest, swells with your voice
     } else if (state === "thinking") {
-      h = 20; cyL = cyR = 26 + Math.sin(t * 3) * 1;   // narrowed, looking up
-      // orbiting thought dot
-      ctx.beginPath();
-      ctx.arc(64 + Math.cos(t * 4) * 30, 30 + Math.sin(t * 4) * 10, 2.5, 0, 7);
-      ctx.fill();
+      bandDots(t);
+      h = 6; cyL = cyR = EYE_CY - 4;             // narrowed to slits
     } else if (state === "speaking") {
-      const b = Math.abs(Math.sin(t * 7));
-      h = 18 + b * 12; cyL = cyR = 32 - b * 2;   // rhythmic talk bob
+      bandWave(t);
+      h = 26 + Math.abs(Math.sin(t * 7)) * 8;
+      dome = true;
     } else if (state === "error") {
+      for (let x = 0; x < 128; x += 8) ctx.fillRect(x, 4, 4, 8);
+      ctx.fillStyle = color; ctx.shadowColor = color;
       ctx.lineWidth = 4; ctx.strokeStyle = color;
       for (const cx of [lx + w / 2, rx + w / 2]) {
         ctx.beginPath();
-        ctx.moveTo(cx - 11, 21); ctx.lineTo(cx + 11, 43);
-        ctx.moveTo(cx + 11, 21); ctx.lineTo(cx - 11, 43);
+        ctx.moveTo(cx - 11, EYE_CY - 11); ctx.lineTo(cx + 11, EYE_CY + 11);
+        ctx.moveTo(cx + 11, EYE_CY - 11); ctx.lineTo(cx - 11, EYE_CY + 11);
         ctx.stroke();
       }
       ctx.shadowBlur = 0; requestAnimationFrame(draw); return;
     }
-    eye(lx, cyL, w, h);
-    eye(rx, cyR, w, h);
+
+    ctx.fillStyle = color; ctx.shadowColor = color;
+    if (dome) { domeEye(lx, cyL, w, h); domeEye(rx, cyR, w, h); }
+    else      { eye(lx, cyL, w, h);     eye(rx, cyR, w, h); }
     ctx.shadowBlur = 0;
     requestAnimationFrame(draw);
   }
