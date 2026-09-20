@@ -159,6 +159,36 @@
     "boot": true
   },
   {
+    "key": "syncthing",
+    "label": "Syncthing",
+    "category": "termux",
+    "_note": "Continuous folder sync, GUI on port 2128. Native Termux package (pkg install syncthing) — runs directly, no proot needed. GUI bound to 127.0.0.1 only, not tunnelled: reach it via `ssh -L 2128:localhost:2128 <phone>` rather than a public hostname, since it's a device-pairing/admin UI, not a token-gated API.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "syncthing"
+    },
+    "start": "tmux new-session -d -s syncthing 'syncthing serve --no-browser --gui-address=127.0.0.1:{SYNCTHING_PORT}'",
+    "stop": "tmux kill-session -t syncthing",
+    "tmux_session": "syncthing",
+    "alert": true,
+    "boot": true
+  },
+  {
+    "key": "vaultwarden",
+    "label": "Vaultwarden",
+    "category": "proot",
+    "_note": "Bitwarden-compatible password manager on port 2129, served at vault.prayas.space. Runs INSIDE proot Ubuntu — no Termux package, and it's a glibc/musl Linux binary that needs proot rather than bionic Termux. Data dir /root/vaultwarden-data inside proot, outside this repo (holds vault data). Own per-user login, not WEBHOOK_TOKEN. Set SIGNUPS_ALLOWED=false in the unit/env once your account exists. See docs/vaultwarden.md.",
+    "check": {
+      "mechanism": "tmux",
+      "value": "vaultwarden"
+    },
+    "start": "tmux new-session -d -s vaultwarden 'proot-distro login ubuntu -- bash -c \"ROCKET_PORT={VAULTWARDEN_PORT} DATA_FOLDER=/root/vaultwarden-data ADMIN_TOKEN={VAULTWARDEN_ADMIN_TOKEN} SIGNUPS_ALLOWED=false vaultwarden\"'",
+    "stop": "tmux kill-session -t vaultwarden",
+    "tmux_session": "vaultwarden",
+    "alert": true,
+    "boot": true
+  },
+  {
     "key": "feeder",
     "label": "Feeder",
     "category": "esp32",

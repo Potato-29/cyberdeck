@@ -23,6 +23,8 @@ The table below is a human-readable summary; `services.json` is authoritative if
 | forza | Termux | `forza` | yes | yes |
 | buddy | proot | `buddy` | yes | yes |
 | ferran_alert | Termux | `ferran-alert` | yes | yes |
+| syncthing | Termux | `syncthing` | yes | yes |
+| vaultwarden | proot | `vaultwarden` | yes | yes |
 | feeder (ESP32) | remote hardware | n/a | n/a | yes |
 
 ## Descriptions
@@ -38,6 +40,8 @@ The table below is a human-readable summary; `services.json` is authoritative if
 - **forza** (`forza_listener.py`) — FH6 telemetry server (HTTP + WebSocket on port 8000, UDP listener on 5300) feeding the dashboard's Forza panel.
 - **buddy** (`deskbuddy/broker.py`) — Desk voice assistant broker (HTTP + WebSocket on port **2125**, inside proot Ubuntu). Runs the "hey jarvis" wake word and Groq STT/LLM/TTS; the ESP32 streams mic audio and shows reactive OLED eyes, replies play on the phone speaker. LAN-only, not tunnelled. See [Desk Buddy](deskbuddy.md).
 - **ferran_alert** (`ferran_alert.mjs`) — Ferran Torres shot-alert poller.
+- **syncthing** — Continuous folder sync (native Termux package, no proot). GUI on port **2128**, bound to `127.0.0.1` only — not on the tunnel, since it's a device-pairing/admin UI rather than a token-gated API; reach it with `ssh -L 2128:localhost:2128 <phone>`.
+- **vaultwarden** — Bitwarden-compatible password manager, port **2129**, served at `vault.prayas.space`. Runs inside proot (no Termux package; needs a glibc/musl Linux binary). Its own per-user login, not `WEBHOOK_TOKEN`; `/admin` is gated by `VAULTWARDEN_ADMIN_TOKEN`. Vault data lives at `/root/vaultwarden-data` inside proot, outside this repo.
 - **feeder** — ESP32 cat feeder. Checked over HTTP; can't be restarted remotely (it's separate hardware), but `/feed`, `/door-open`, `/door-close` are exposed as dashboard control-panel buttons.
 
 ## Control panel

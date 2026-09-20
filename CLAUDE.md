@@ -28,6 +28,8 @@ The most collision-prone thing in the repo. Check here before picking one.
 | 2125 | `deskbuddy/broker.py` — voice assistant broker (proot) | phone |
 | 2126 | `crumbs` — Crumb Notes (proot, `node build`) | phone |
 | 2127 | `work-log-tool/server.js` — work log capture | phone |
+| 2128 | Syncthing GUI (127.0.0.1 only, not tunnelled) | phone |
+| 2129 | Vaultwarden (proot) | phone |
 | 8000 | `forza/forza_listener.py` (UDP 5300 in) | phone |
 | 8085 | LibreHardwareMonitor telemetry | **PC** |
 | 8086 | `pc-deck-agent.py` app launcher | **PC** |

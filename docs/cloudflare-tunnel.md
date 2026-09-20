@@ -19,6 +19,8 @@ ingress:
     service: http://localhost:2122
   - hostname: ideas.prayas.space
     service: http://localhost:2124
+  - hostname: vault.prayas.space
+    service: http://localhost:2129
   - service: http_status:404
 ```
 
