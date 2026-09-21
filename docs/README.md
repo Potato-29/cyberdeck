@@ -18,6 +18,7 @@ The Cyberdeck is a rooted Android phone permanently stationed at your desk. It r
 | Multi-context capture, voice notes | [Work log](work-log.md) |
 | Idea board, accounts, backups | [Idea board](ideas.md) |
 | ESP32 voice assistant, wake word | [Desk Buddy](deskbuddy.md) |
+| Password manager, build-from-source | [Vaultwarden](vaultwarden.md) |
 | tmux, ntfy, webhook, Cloudflare CLI | [Commands](commands.md) |
 | Troubleshooting | [Debugging](debugging.md) |
 
