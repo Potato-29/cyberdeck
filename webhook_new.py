@@ -705,6 +705,39 @@ def deck_close():
         ), 503
 
 
+@app.route("/audio/status", methods=["GET"])
+def audio_status():
+    """Mic/speaker mute state from the PC agent."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        resp = call_pc_agent("audio/status")
+        resp.raise_for_status()
+        return jsonify(resp.json()), 200
+    except Exception:
+        # PC asleep or agent not running — buttons grey out rather than hang
+        return jsonify({"online": False}), 200
+
+
+@app.route("/audio/toggle", methods=["GET", "POST"])
+def audio_toggle():
+    """Toggle mute on the PC's default mic or speaker."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    target = request.args.get("target")
+    if target not in ("mic", "speaker"):
+        return jsonify({"error": "target must be 'mic' or 'speaker'"}), 400
+
+    try:
+        resp = call_pc_agent("audio/toggle", {"target": target})
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify(
+            {"status": "error", "message": f"PC agent unreachable: {e}"}
+        ), 503
+
+
 @app.route("/dashboard/data", methods=["GET"])
 def dashboard_data():
     """Aggregate all dashboard widgets into one JSON response."""
