@@ -48,6 +48,9 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
 - **`standup.py`** — Flask *blueprint*, registered into `webhook_new.py`. Serves
   `/standup*` on 2122. Persists to an append-only JSONL file.
 - **`dashboard.html`** — 1400-line single-file cyberdeck HUD, served by `send_file`.
+- **`hud/`** — the React replacement for it (bento widgets, Motion animations,
+  landscape-first), served by `webhook_new.py` at `/hud`. Runs side by side with
+  `/dashboard` until it takes over. See [docs/hud.md](docs/hud.md).
 - **`forza/`** — standalone aiohttp service (HTTP + WebSocket) for the Forza telemetry HUD.
 - **`ideas/`** — standalone idea board. **The exception to most rules below.**
 - **`work-log-tool/`** — work log capture. **The only Node service in the tree**
@@ -66,7 +69,8 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
 ## Conventions
 
 - **No build step, no package manager.** No `package.json`, no lockfile, no
-  `requirements.txt` anywhere except `ideas/web/`. Python deps (`flask`,
+  `requirements.txt` anywhere except `ideas/web/` and `hud/` (and
+  `work-log-tool/`). Python deps (`flask`,
   `requests`, `aiohttp`, `pycaw`) are installed ad-hoc with `pip install`.
 - **Config lives in JSON, read fresh per call** — `services.json`, `actions.json`,
   `deck-apps.json` all follow the same pattern: no caching, no restart to apply.
