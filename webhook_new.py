@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 app = Flask(__name__)
 
@@ -774,6 +774,29 @@ def dashboard_page():
     if html_path.exists():
         return send_file(str(html_path))
     return jsonify({"error": "dashboard.html not found"}), 404
+
+
+# React HUD (hud/) — built bundle is committed in hud/dist, so the phone needs
+# no toolchain. Lives at /hud, not /deck, because /deck/* is the PC launcher API.
+HUD_DIST = Path(__file__).resolve().parent / "hud" / "dist"
+
+
+@app.route("/hud", methods=["GET"])
+@app.route("/hud/", methods=["GET"])
+def hud_page():
+    """Serve the React dashboard shell; it reads the token off its own URL."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if not (HUD_DIST / "index.html").is_file():
+        return jsonify({"error": "hud not built — cd hud && npm run build"}), 503
+    return send_from_directory(HUD_DIST, "index.html")
+
+
+@app.route("/hud/assets/<path:path>", methods=["GET"])
+def hud_assets(path):
+    """Hashed JS/CSS — no secrets in them, so no token (a <script> tag can't send one).
+    send_from_directory refuses paths that escape the folder."""
+    return send_from_directory(HUD_DIST / "assets", path, max_age=31536000)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Cyberdeck</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='12' height='12' rx='4' fill='%2330d158'/><rect x='18' y='2' width='12' height='12' rx='4' fill='%230a84ff'/><rect x='2' y='18' width='12' height='12' rx='4' fill='%23ff9f0a'/><rect x='18' y='18' width='12' height='12' rx='4' fill='%23bf5af2'/></svg>" />
+    <script>
+      // Applied before first paint so a dark-theme user never sees a white flash.
+      (function () {
+        try {
+          var saved = localStorage.getItem('hud-theme')
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved)
+          }
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
