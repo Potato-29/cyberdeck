@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { DataProvider } from './data'
+import { LiteProvider } from './perf'
 import { ConfirmProvider } from './ui/Sheet'
 import './theme.css'
 
@@ -10,6 +11,7 @@ import './theme.css'
 // (domMax: layout + drag). reducedMotion="user" turns springs into fades.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <LiteProvider>
     <LazyMotion features={domMax} strict>
       <MotionConfig reducedMotion="user">
         <DataProvider>
@@ -19,5 +21,6 @@ createRoot(document.getElementById('root')!).render(
         </DataProvider>
       </MotionConfig>
     </LazyMotion>
+    </LiteProvider>
   </StrictMode>,
 )

@@ -2,6 +2,7 @@ import { AnimatePresence, m, type PanInfo } from 'motion/react'
 import { useCallback, useEffect, useState, type ComponentType } from 'react'
 import { isUp } from './api'
 import { useData } from './data'
+import { useLite, useNotchInset } from './perf'
 import { Orbs } from './fx/Orbs'
 import { IcChip, IcCore, IcExpand, IcGrid, IcMoon, IcShrink, IcSignal, IcSun } from './ui/icons'
 import { CorePage } from './widgets/Core'
@@ -18,12 +19,21 @@ const PAGES: { key: string; label: string; Icon: ComponentType; Page: ComponentT
 ]
 
 const pageVariants = {
-  enter: (dir: number) => ({ x: dir * 60, opacity: 0 }),
+  enter: (dir: number) => ({ x: dir * 48, opacity: 0 }),
   show: {
     x: 0, opacity: 1,
-    transition: { type: 'spring', stiffness: 320, damping: 32, staggerChildren: 0.045, delayChildren: 0.02 },
+    transition: { type: 'spring', stiffness: 360, damping: 36, staggerChildren: 0.04 },
   },
-  exit: (dir: number) => ({ x: dir * -60, opacity: 0, transition: { duration: 0.18 } }),
+  exit: (dir: number) => ({ x: dir * -48, opacity: 0, transition: { duration: 0.16 } }),
+} as const
+
+// Lite: the old page fades out, then the new one fades in — one opacity
+// animation at a time (Motion hands opacity to the compositor), and React
+// renders the new page while nothing else is moving.
+const litePageVariants = {
+  enter: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
 } as const
 
 function initialPage() {
@@ -35,6 +45,8 @@ function initialPage() {
 
 export default function App() {
   const [[page, dir], setPage] = useState<[number, number]>(() => [initialPage(), 0])
+  const lite = useLite()
+  useNotchInset()
 
   const go = useCallback((next: number) => {
     setPage(([cur]) => {
@@ -69,12 +81,12 @@ export default function App() {
       <div className="shell">
         <Rail page={page} go={go} />
         <main className="stage">
-          <AnimatePresence initial={true} custom={dir} mode="popLayout">
+          <AnimatePresence initial={true} custom={dir} mode={lite ? 'wait' : 'popLayout'}>
             <m.div
               key={PAGES[page].key}
               className="page"
               custom={dir}
-              variants={pageVariants}
+              variants={lite ? litePageVariants : pageVariants}
               initial="enter"
               animate="show"
               exit="exit"
@@ -101,10 +113,8 @@ function Rail({ page, go }: { page: number; go: (i: number) => void }) {
   return (
     <nav className="rail">
       <Clock />
-      <m.span className={'global-dot ' + (healthy ? '' : 'bad')}
-        title={healthy ? 'All services up' : dash.error ? 'Hub unreachable' : 'Service down'}
-        animate={healthy ? { scale: 1 } : { scale: [1, 1.5, 1] }}
-        transition={healthy ? undefined : { repeat: Infinity, duration: 1.4 }} />
+      <span className={'global-dot ' + (healthy ? '' : 'bad ripple')}
+        title={healthy ? 'All services up' : dash.error ? 'Hub unreachable' : 'Service down'} />
       <div className="rail-nav">
         {PAGES.map((p, i) => (
           <m.button key={p.key} className="rail-btn" aria-label={p.label} aria-current={i === page ? 'page' : undefined}

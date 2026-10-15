@@ -1,11 +1,16 @@
 import { m } from 'motion/react'
 import type { CSSProperties, ReactNode } from 'react'
+import { useLite } from '../perf'
 import { IcExpand } from './icons'
 
-export const tileVariants = {
-  hidden: { opacity: 0, y: 18, scale: 0.96 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 260, damping: 24 } },
+// Translate + fade only — no scale, which forces the tile's SVGs and text to
+// re-rasterise every frame on a weak GPU.
+const full = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 320, damping: 30 } },
 } as const
+// Lite: tiles don't animate on their own; the page fades in as one layer.
+const lite = { hidden: {}, show: {} } as const
 
 /**
  * One bento cell. `area` is a CSS grid-area ("row / col / row-end / col-end").
@@ -23,11 +28,12 @@ export function Tile({ id, area, icon, title, aside, accent, onExpand, children,
   children: ReactNode
   style?: CSSProperties
 }) {
+  const isLite = useLite()
   return (
     <m.section
       className="tile"
       layoutId={onExpand ? 'tile-' + id : undefined}
-      variants={tileVariants}
+      variants={isLite ? lite : full}
       style={{ gridArea: area, ...style }}
     >
       {(title || icon) && (

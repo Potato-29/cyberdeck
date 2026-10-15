@@ -55,10 +55,10 @@ function Services() {
       aside={rows.length ? <span><span style={{ color: up === rows.length ? 'var(--green)' : 'var(--red)' }}>{up}</span>/{rows.length} up</span> : null}>
       <div className="scroll-y" style={{ margin: '0 -8px', padding: '0 8px 12px' }}>
         <AnimatePresence initial={false}>
-          {sorted.map((s) => {
+          {sorted.map((s, i) => {
             const running = isUp(svcs[s.key])
             return (
-              <m.div key={s.key} layout transition={{ type: 'spring', stiffness: 400, damping: 36 }}
+              <m.div key={s.key} layout layoutDependency={i} transition={{ type: 'spring', stiffness: 400, damping: 36 }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderBottom: '1px solid var(--line)' }}>
                 <StatusDot up={running} />
@@ -83,29 +83,30 @@ function Services() {
   )
 }
 
+/** Green/red dot; a down service gets a CSS ripple (theme.css → .ripple). */
 export function StatusDot({ up }: { up: boolean }) {
   return (
-    <span style={{ position: 'relative', width: 8, height: 8, flex: '0 0 auto' }}>
-      <m.span style={{ position: 'absolute', inset: 0, borderRadius: '50%' }}
-        animate={{ backgroundColor: up ? 'var(--green)' : 'var(--red)' }} />
-      {!up && (
-        <m.span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--red)' }}
-          animate={{ scale: [1, 2.6], opacity: [0.6, 0] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }} />
-      )}
-    </span>
+    <span className={'status-dot' + (up ? '' : ' ripple')}
+      style={{ background: up ? 'var(--green)' : 'var(--red)' }} />
   )
+}
+
+// termux-battery-status values → short labels that fit a quarter-width tile.
+const BATTERY_STATUS: Record<string, string> = {
+  CHARGING: 'Charging', DISCHARGING: 'On battery', NOT_CHARGING: 'Plugged in', FULL: 'Full',
 }
 
 function Battery() {
   const b = useData().dash.data?.battery ?? {}
   const lvl = b.level ?? null
   const color = lvl == null ? 'var(--text-3)' : lvl <= 15 ? 'var(--red)' : lvl <= 25 ? 'var(--orange)' : 'var(--green)'
-  const charging = (b.status ?? '').toUpperCase().includes('CHARG') && !(b.status ?? '').toUpperCase().includes('DIS')
+  const status = (b.status ?? '').toUpperCase()
+  const charging = status === 'CHARGING'
+  const label = BATTERY_STATUS[status] ?? (status ? status.toLowerCase().replace(/_/g, ' ') : '–')
   return (
     <Tile id="battery" area="1 / 3 / 2 / 4" icon={<IcBolt />} title="Battery" accent={color}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minHeight: 0 }}>
-        <Ring value={lvl} color={color} size={78} stroke={8}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minHeight: 0, minWidth: 0 }}>
+        <Ring value={lvl} color={color} size={72} stroke={8}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AnimatePresence>
               {charging && (
@@ -118,10 +119,10 @@ function Battery() {
             <Num value={lvl} unit="%" className="mid" />
           </div>
         </Ring>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="small" style={{ fontWeight: 600, textTransform: 'capitalize' }}>{(b.status ?? '–').toLowerCase().replace(/_/g, ' ')}</div>
-          <div className="tiny dim" style={{ marginTop: 4 }}><Num value={b.temperature} decimals={1} unit="°C" /></div>
-          <div className="tiny faint" style={{ marginTop: 2, textTransform: 'capitalize' }}>{(b.health ?? '').toLowerCase()}</div>
+        <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+          <div className="small ellipsis" style={{ fontWeight: 600, textTransform: 'capitalize' }}>{label}</div>
+          <div className="tiny dim ellipsis" style={{ marginTop: 4 }}><Num value={b.temperature} decimals={1} unit="°C" /></div>
+          <div className="tiny faint ellipsis" style={{ marginTop: 2, textTransform: 'capitalize' }}>{(b.health ?? '').toLowerCase()}</div>
         </div>
       </div>
     </Tile>
