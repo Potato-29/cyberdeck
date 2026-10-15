@@ -49,6 +49,7 @@ export function Chip({ onRun, children, className = '', okLabel = 'Done', errLab
       title={title}
       whileTap={{ scale: 0.94 }}
       layout="position"
+      layoutDependency={phase}
     >
       <AnimatePresence mode="popLayout" initial={false}>
         <m.span
@@ -66,15 +67,12 @@ export function Chip({ onRun, children, className = '', okLabel = 'Done', errLab
   )
 }
 
+/** CSS-rotated (theme.css → .spin) so it stays on the compositor. */
 export function Spinner({ size = 14 }: { size?: number }) {
   return (
-    <m.svg
-      width={size} height={size} viewBox="0 0 24 24"
-      animate={{ rotate: 360 }}
-      transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-    >
+    <svg className="spin" width={size} height={size} viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
       <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </m.svg>
+    </svg>
   )
 }

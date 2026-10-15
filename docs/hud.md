@@ -58,6 +58,36 @@ Stopping `cloudflared` or `webhook`, and any action with `"confirm": true` in
 - Polling (`hooks/usePoll.ts`) runs every 4s for `/dashboard/data` and every 8s
   for the PC link. It pauses while the tab is hidden and backs off on errors.
 
+## Performance on the deck
+
+The deck (Honor Play) has a much weaker CPU/GPU than a current phone, so:
+
+- **Nothing that loops runs in JavaScript.** The background orbs, the
+  spinners and the down-service ripples are CSS keyframes, which run on the
+  compositor. Rings and bars use CSS transitions. Motion only handles one-off
+  interactions: page changes, taps, the sheet.
+- The orbs are radial gradients, never `filter: blur`. Tiles enter with a
+  translate and fade, never a scale. Chips and service rows measure their
+  layout only when their label or order changes (`layoutDependency`), not on
+  every 4s poll.
+- **Lite mode** (`src/perf.tsx`) cuts further: the whole page fades as one
+  layer, numbers are set instead of counted, tiles are opaque, the background
+  is static, and scroll-edge masks are off. It switches on by itself if the
+  first page animates in below ~45fps. To force it on the deck, open the page
+  once with `&lite=1`; the choice is remembered (`&lite=0` forces it off,
+  `&lite=auto` goes back to detecting).
+
+Under 6× CPU throttling in headless Chromium, the old build ran at a median of
+50 ms per frame (20 fps) while switching pages; this one runs at 16.7 ms (60 fps).
+
+## Notch
+
+The deck's browser reports `env(safe-area-inset-*)` as 0, so in fullscreen the
+rail sat under the notch. `useNotchInset()` pads the notch side (left at
+orientation angle 90, right at 270) whenever a touch device's viewport spans
+the full long edge of the screen. The padding is 32px; to change it, open the
+page once with `&notch=<px>`.
+
 ## Develop and deploy
 
 Build on the PC, not the phone:
