@@ -776,6 +776,17 @@ def dashboard_page():
     return jsonify({"error": "dashboard.html not found"}), 404
 
 
+@app.route("/workout", methods=["GET"])
+def workout_page():
+    """Serve the 5 PM workout + diet plan. Token-gated: it has body stats."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    html_path = Path(__file__).parent / "workout.html"
+    if html_path.exists():
+        return send_file(str(html_path))
+    return jsonify({"error": "workout.html not found"}), 404
+
+
 # React HUD (hud/) — built bundle is committed in hud/dist, so the phone needs
 # no toolchain. Lives at /hud, not /deck, because /deck/* is the PC launcher API.
 HUD_DIST = Path(__file__).resolve().parent / "hud" / "dist"

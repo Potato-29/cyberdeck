@@ -38,6 +38,7 @@ These files mirror what typically lives under `~` on the device. They load secre
 | `pc-telemetry-monitor.py` | PC LibreHardwareMonitor poll for wtfutil |
 | `pc-deck-agent.py` + `deck-apps.json` | **Runs on the PC** — whitelisted app launcher (port 8086) |
 | `standup.py` + `standup.html` | Daily work log, Friday update generator (blueprint on 2122) |
+| `workout.html` | Workout + diet plan, served at `/workout` on 2122 (token-gated) |
 | `note.ps1` | **Runs on the PC** — log a standup note from the terminal |
 | `test-standup.sh` | Non-destructive smoke test for the standup endpoints |
 | `hud/` | React dashboard — Vite build committed in `hud/dist`, served at `/hud` on 2122 |

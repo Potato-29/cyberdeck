@@ -1,0 +1,522 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Prayas 5 PM Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a training log. Sticky tab bar, one panel at a time, days colour-coded like Olympic bumper plates (red 25, blue 20, yellow 15, green 10). */
+:root{
+  --bg:#f2f3f1; --surface:#ffffff; --fg:#1b1f22; --muted:#5d666c; --line:#d9ddda; --soft:#e8ebe8;
+  --ink:#1f3a5f;
+  --push:#c8322b; --pull:#2a5bb8; --legs:#c99a06; --cardio:#2f8a4e; --rest:#8a9196;
+  --push-bg:#f8e3e1; --pull-bg:#e0e9f8; --legs-bg:#f7eecc; --cardio-bg:#ddf0e3; --rest-bg:#eceeee;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121518; --surface:#1a1e22; --fg:#e7eae8; --muted:#9aa3a8; --line:#2c3237; --soft:#22272b;
+  --ink:#9cb9e3;
+  --push:#ef6a62; --pull:#6f9cf0; --legs:#e8c04a; --cardio:#5cc07f; --rest:#9aa3a8;
+  --push-bg:#3a1f1d; --pull-bg:#1c2a42; --legs-bg:#3a3118; --cardio-bg:#1a3324; --rest-bg:#24292d;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121518; --surface:#1a1e22; --fg:#e7eae8; --muted:#9aa3a8; --line:#2c3237; --soft:#22272b;
+  --ink:#9cb9e3;
+  --push:#ef6a62; --pull:#6f9cf0; --legs:#e8c04a; --cardio:#5cc07f; --rest:#9aa3a8;
+  --push-bg:#3a1f1d; --pull-bg:#1c2a42; --legs-bg:#3a3118; --cardio-bg:#1a3324; --rest-bg:#24292d;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:920px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;letter-spacing:.01em;text-transform:uppercase}
+h2{font-size:1.9rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+h3{font-size:1.35rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+p{margin:0;max-width:65ch}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header.top{padding-block:28px 18px;display:grid;gap:10px}
+.sub{color:var(--muted);max-width:60ch}
+.stats{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:6px}
+.stats div{display:grid}
+.stats b{font-family:var(--mono);font-weight:500;font-size:1.05rem}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:2px solid var(--fg);display:flex;gap:2px;overflow-x:auto;margin-inline:-16px;padding-inline:16px}
+nav.tabs button{font-family:var(--display);font-size:1.15rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;background:none;border:0;color:var(--muted);padding:12px 14px 10px;cursor:pointer;white-space:nowrap;border-bottom:4px solid transparent;margin-bottom:-2px}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+section.panel{padding-top:24px;display:grid;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px}
+.grid{display:grid;gap:12px}
+/* Week strip */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day{border-radius:6px;padding:10px 8px 12px;display:grid;gap:4px;align-content:start;cursor:pointer;border:2px solid transparent;background:var(--soft);text-align:left;color:var(--fg);font:inherit}
+.day .dn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.day .dt{font-family:var(--display);font-weight:700;font-size:1.3rem;text-transform:uppercase;line-height:1}
+.day .dd{font-size:.78rem;color:var(--muted);line-height:1.3}
+.day.today{border-color:var(--fg)}
+.day.sel{outline:2px solid var(--ink);outline-offset:1px}
+.t-push{background:var(--push-bg)} .t-push .dt{color:var(--push)}
+.t-pull{background:var(--pull-bg)} .t-pull .dt{color:var(--pull)}
+.t-legs{background:var(--legs-bg)} .t-legs .dt{color:var(--legs)}
+.t-cardio{background:var(--cardio-bg)} .t-cardio .dt{color:var(--cardio)}
+.t-rest{background:var(--rest-bg)} .t-rest .dt{color:var(--rest)}
+@media (max-width:640px){.week{grid-template-columns:repeat(4,minmax(0,1fr))}.day .dd{display:none}}
+/* Session */
+.sess-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.pill{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;color:var(--surface)}
+.ex{width:100%;border-collapse:collapse}
+.ex th{text-align:left;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+.ex td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.ex td.n{font-weight:600}
+.ex td.s{font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ex .note{display:block;font-size:.82rem;color:var(--muted);font-weight:400;margin-top:2px}
+.tablewrap{overflow-x:auto}
+.phase{display:grid;gap:8px}
+.phase-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.phase-h h3{font-size:1.15rem}
+.phase-h .label{letter-spacing:.06em}
+.drill{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.drill li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.drill li:last-child{border-bottom:0}
+.drill .dn2{font-weight:500}
+.drill .dose{font-family:var(--mono);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)}
+.drill .note{grid-column:1/-1;font-size:.82rem;color:var(--muted)}
+.phases{display:grid;gap:22px}
+.timeline{display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+.timeline .mono{color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.two>*{min-width:0}
+ul.tight{margin:0;padding-left:1.1em;display:grid;gap:6px}
+.callout{border-left:4px solid var(--ink);padding:10px 14px;background:var(--surface);border-radius:0 6px 6px 0}
+/* Diet */
+.meals{display:grid;gap:10px}
+.meal{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px}
+.meal .time{font-family:var(--mono);font-size:.9rem;color:var(--muted)}
+.meal .what{display:grid;gap:4px;min-width:0}
+.meal .nm{font-weight:600}
+.meal .det{font-size:.85rem;color:var(--muted)}
+.meal .mac{font-family:var(--mono);font-size:.82rem;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.meal select{font:inherit;font-size:.9rem;padding:6px 8px;border-radius:4px;border:1px solid var(--line);background:var(--bg);color:var(--fg);max-width:100%}
+@media (max-width:520px){.meal{grid-template-columns:1fr}.meal .mac{text-align:left}}
+.totals{display:flex;flex-wrap:wrap;gap:12px}
+.tot{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:6px}
+.tot .big{font-family:var(--display);font-size:2.2rem;font-weight:700;line-height:1}
+.bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink);border-radius:4px;transition:width .3s}
+.recipe{display:grid;gap:8px}
+.recipe .set{font-family:var(--mono);font-size:.82rem;color:var(--ink)}
+/* Calculator */
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.form label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+.form input,.form select{font:inherit;font-family:var(--mono);font-size:1rem;padding:8px 10px;border-radius:4px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.out .tot .big{font-size:2rem}
+footer{margin-top:36px;color:var(--muted);font-size:.82rem;max-width:70ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="label">Restart block · from Oct 2026</span>
+  <h1>Prayas · 5 PM Plan</h1>
+  <p class="sub">Train solo at 5, done by 6:15, nights free. Three lifting days to rebuild muscle, three cardio days to burn the belly fat, and a no-cook diet you can repeat every day.</p>
+  <div class="stats">
+    <div><span class="label">Height</span><b>163 cm</b></div>
+    <div><span class="label">Weight</span><b>~56 kg</b></div>
+    <div><span class="label">Daily target</span><b id="hdrK">~1800 kcal</b></div>
+    <div><span class="label">Protein</span><b id="hdrP">~110 g</b></div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="week" aria-selected="true">Week</button>
+  <button role="tab" data-tab="diet" aria-selected="false">Diet</button>
+  <button role="tab" data-tab="recipes" aria-selected="false">Cooking</button>
+  <button role="tab" data-tab="targets" aria-selected="false">Targets</button>
+  <button role="tab" data-tab="rules" aria-selected="false">Rules</button>
+</nav>
+
+<!-- WEEK -->
+<section class="panel" id="p-week">
+  <div class="grid">
+    <span class="label">Tap a day to see the session · today is outlined</span>
+    <div class="week" id="week"></div>
+  </div>
+  <div class="card" id="session"></div>
+  <div class="two">
+    <div class="card grid">
+      <h3>Your 5 PM routine</h3>
+      <div class="timeline">
+        <span class="mono">4:15</span><span>Meal 2: banana + 2 eggs</span>
+        <span class="mono">4:50</span><span>Log off work, leave</span>
+        <span class="mono">5:05</span><span>Targeted warm-up for the day, 8 to 10 min</span>
+        <span class="mono">5:15</span><span>Main session, 45 to 50 min</span>
+        <span class="mono">6:05</span><span>Post-workout stretches, 6 to 8 min</span>
+        <span class="mono">6:15</span><span>Done. Whey shake on the way home</span>
+        <span class="mono">8:30</span><span>Dinner, then the night is yours</span>
+      </div>
+    </div>
+    <div class="card grid">
+      <h3>Why this split</h3>
+      <ul class="tight">
+        <li>Each muscle gets hit once a week with enough volume to grow back what you lost during the break.</li>
+        <li>Cardio days burn extra calories without beating up the muscles you trained the day before.</li>
+        <li>Lifting and cardio alternate, so no day leaves you too sore to show up the next.</li>
+        <li>After 6 to 8 weeks, if you want more, swap Saturday cardio for a second Push or Legs day.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- DIET -->
+<section class="panel" id="p-diet" hidden>
+  <div class="grid">
+    <h2>Two real meals, then the cook's dinner</h2>
+    <p class="sub">Keep your morning milk coffee. Lunch is a 5-minute plate from your prepped chicken, rice or eggs. A small meal before the gym, a shake after, and the cook handles dinner. Pick options and the totals update.</p>
+  </div>
+  <div class="totals">
+    <div class="tot"><span class="label">Calories</span><span class="big mono" id="tK">0</span><div class="bar"><i id="bK"></i></div><span class="label" id="lK"></span></div>
+    <div class="tot"><span class="label">Protein</span><span class="big mono" id="tP">0</span><div class="bar"><i id="bP"></i></div><span class="label" id="lP"></span></div>
+  </div>
+  <div class="meals" id="meals"></div>
+  <div class="two">
+    <div class="card grid">
+      <h3>What to ask the cook</h3>
+      <p>The cook only makes veg, so chicken and eggs are your job at lunch and pre-gym. The one rule for her: <b>every dinner has a veg protein dish</b>, plus 2 rotis and a bowl of curd. Ask for less oil and ghee.</p>
+      <ul class="tight">
+        <li>Rotate: paneer bhurji or sabzi, soya chunk sabzi, chana or rajma, then thick moong or masoor dal.</li>
+        <li>Paneer and soya give the most protein. Keep a pack of soya chunks in the kitchen for her.</li>
+        <li>On plain dal-sabzi days, add 100 g of your own chicken on the side, or have the protein coffee in the morning.</li>
+        <li>You could say: <i>"Didi, dinner mein roz ek protein item banana, paneer, soya ya chana. Tel thoda kam, aur ek katori dahi."</i></li>
+      </ul>
+    </div>
+    <div class="card grid">
+      <h3>Your 1 kg chicken</h3>
+      <ul class="tight">
+        <li>That's about 6 lunches of 150 g raw.</li>
+        <li>Raw marinated chicken is good for 1 to 2 days in the fridge. Freeze the rest today in 150 g bags and move one to the fridge the night before.</li>
+        <li>Air fry 2 to 3 portions at a time. Cooked chicken keeps 3 days in the fridge.</li>
+        <li>Rice: cook 1 cup raw at a time (about 3 servings). Cool it and refrigerate within an hour; eat within 2 days.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="two">
+    <div class="card grid">
+      <h3>Weekly shopping</h3>
+      <ul class="tight">
+        <li>1 kg chicken breast, 24 to 30 eggs (for your own meals)</li>
+        <li>For the cook: 400 g paneer, soya chunks, chana or rajma</li>
+        <li>1 kg rice, 1 kg curd, toned milk, whey</li>
+        <li>Brown bread, bananas, cucumber, onion, tomato</li>
+        <li>Roasted chana for when you're hungry between meals</li>
+      </ul>
+    </div>
+    <div class="callout"><p><b>The fix for skipping lunch:</b> set a 1:30 alarm and treat lunch like a meeting. If you truly have no time, have the protein coffee and 2 eggs instead. Something with protein always beats nothing.</p></div>
+  </div>
+</section>
+
+<!-- RECIPES -->
+<section class="panel" id="p-recipes" hidden>
+  <div class="grid">
+    <h2>Quick cooking</h2>
+    <p class="sub">Everything here uses only the air fryer, one pot of rice or one pan of eggs. Batch the chicken and rice twice a week and lunch takes 5 minutes.</p>
+  </div>
+  <div class="two" id="recipes"></div>
+</section>
+
+<!-- TARGETS -->
+<section class="panel" id="p-targets" hidden>
+  <div class="grid">
+    <h2>Your numbers</h2>
+    <p class="sub">Estimated with the Mifflin–St Jeor formula and a light-desk-job-plus-6-sessions activity level. I assumed male and 25 years old; change anything below and the whole page updates.</p>
+  </div>
+  <div class="card">
+    <form class="form" id="calc" onsubmit="return false">
+      <label for="cw">Weight (kg)<input id="cw" type="number" step="0.5" value="56"></label>
+      <label for="ch">Height (cm)<input id="ch" type="number" value="163"></label>
+      <label for="ca">Age<input id="ca" type="number" value="25"></label>
+      <label for="cs">Sex<select id="cs"><option value="m">Male</option><option value="f">Female</option></select></label>
+    </form>
+  </div>
+  <div class="out">
+    <div class="tot"><span class="label">Maintenance</span><span class="big mono" id="oM"></span><span class="label">kcal / day</span></div>
+    <div class="tot"><span class="label">Fat-loss target</span><span class="big mono" id="oT"></span><span class="label">kcal / day (−300)</span></div>
+    <div class="tot"><span class="label">Protein</span><span class="big mono" id="oP"></span><span class="label">g / day (2 g per kg)</span></div>
+    <div class="tot"><span class="label">Fat · Carbs</span><span class="big mono" id="oF"></span><span class="label">g / day</span></div>
+  </div>
+  <div class="card grid">
+    <h3>What to expect</h3>
+    <ul class="tight">
+      <li>Aim to lose 0.25 to 0.5 kg a week. Slower is fine at your size; it keeps the muscle.</li>
+      <li>The scale may barely move in the first month while you regain muscle. The waist tape is the better signal.</li>
+      <li>Belly fat comes off last for most people, and you can't target it with crunches. It goes as overall fat drops.</li>
+      <li>Rough timeline: visible change in 6 to 8 weeks, a clearly flatter stomach in 4 to 6 months.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- RULES -->
+<section class="panel" id="p-rules" hidden>
+  <h2>How to run it</h2>
+  <div class="two">
+    <div class="card grid">
+      <h3>Lifting</h3>
+      <ul class="tight">
+        <li><b>Double progression.</b> Pick a weight you can do for the bottom of the rep range. When you hit the top of the range on every set, add 2.5 kg (or the next dumbbell).</li>
+        <li>Stop each set with 1 to 2 good reps left. No grinding to failure on squats or bench.</li>
+        <li>Weeks 1 and 2 back: use about 70% of your old weights. Soreness after a long break is normal.</li>
+        <li>Write down weight and reps for every set. Beat last week by one rep or a little weight.</li>
+      </ul>
+    </div>
+    <div class="card grid">
+      <h3>Cardio</h3>
+      <ul class="tight">
+        <li><b>Zone 2</b> means you can talk in full sentences but wouldn't want to sing. Roughly 120 to 140 bpm.</li>
+        <li>Incline walking is the best fit: easy on knees, burns well, doesn't wreck your legs for Friday.</li>
+        <li>Hit 8,000 steps a day on top. Walk during calls; it matters more than people think on a desk job.</li>
+      </ul>
+    </div>
+    <div class="card grid">
+      <h3>Check-ins</h3>
+      <ul class="tight">
+        <li>Weigh 3 mornings a week after the toilet, before food. Use the weekly average.</li>
+        <li>Measure your waist at the navel every Sunday morning.</li>
+        <li>If both are flat for 2 weeks, drop 150 kcal (about 100 g less rice) or add 2,000 steps.</li>
+        <li>Sleep 7+ hours. Short sleep makes fat loss much harder.</li>
+      </ul>
+    </div>
+    <div class="card grid">
+      <h3>Missed a day?</h3>
+      <ul class="tight">
+        <li>Missed a lift: do it on the next cardio day and move cardio to Sunday.</li>
+        <li>Missed cardio: walk 45 minutes outside in the evening or skip it. Never skip lifting for cardio.</li>
+        <li>Busy week: the three lifting days are the minimum. Protein every day, no matter what.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>General fitness guidance based on standard formulas, not medical advice. Calorie and protein numbers are estimates; check with a doctor if you have any condition or injury before starting.</footer>
+</div>
+
+<script>
+const PLAN = [
+ {d:"Mon",type:"push",t:"Push",desc:"Chest, shoulders, triceps",dur:"55 min",
+  ex:[["Barbell bench press","3 × 6–8","2–3 min","Main lift. Or dumbbell bench if no spotter."],
+      ["Incline dumbbell press","3 × 8–10","2 min","Bench at 30°. Upper chest."],
+      ["Seated dumbbell shoulder press","3 × 8–10","2 min",""],
+      ["Lateral raise","3 × 12–15","60 s","Light, slow, no swinging. Builds the width."],
+      ["Cable triceps pushdown","3 × 10–12","60 s",""],
+      ["Overhead cable triceps extension","2 × 12–15","60 s",""],
+      ["Plank","3 × 30–45 s","45 s","Finisher"]]},
+ {d:"Tue",type:"cardio",t:"Cardio",desc:"Zone 2 incline walk",dur:"50 min",
+  ex:[["Incline treadmill walk","40 min","—","Incline 8–12%, speed 4.5–5.5 km/h. No holding the rails."],
+      ["Dead bug","3 × 10 / side","45 s","Lower back flat on the floor."],
+      ["Side plank","2 × 30 s / side","30 s",""]]},
+ {d:"Wed",type:"pull",t:"Pull",desc:"Back, rear delts, biceps",dur:"55 min",
+  ex:[["Lat pulldown","3 × 8–10","2 min","Or assisted pull-ups."],
+      ["Chest-supported dumbbell row","3 × 8–10","2 min","Or barbell row."],
+      ["Seated cable row","3 × 10–12","90 s","Squeeze shoulder blades."],
+      ["Face pull","3 × 15","60 s","Good for posture after desk work."],
+      ["Dumbbell curl","3 × 10–12","60 s",""],
+      ["Hammer curl","2 × 12","60 s",""],
+      ["Hanging knee raise","3 × 10–12","60 s","Finisher"]]},
+ {d:"Thu",type:"cardio",t:"Cardio",desc:"Intervals + walk",dur:"45 min",
+  ex:[["Bike or rower warm-up","5 min","—","Easy pace."],
+      ["Intervals","8 × (30 s hard / 90 s easy)","—","Hard means you can't talk. 16 min total."],
+      ["Incline treadmill walk","15 min","—","Cool down, zone 2."],
+      ["Cable crunch","3 × 12–15","60 s",""]]},
+ {d:"Fri",type:"legs",t:"Legs",desc:"Quads, hamstrings, glutes",dur:"60 min",
+  ex:[["Back squat","3 × 6–8","2–3 min","Or goblet squat / hack squat while you rebuild."],
+      ["Romanian deadlift","3 × 8–10","2 min","Hinge at the hips, slight knee bend."],
+      ["Leg press","3 × 10–12","90 s",""],
+      ["Lying or seated leg curl","3 × 10–12","60 s",""],
+      ["Walking lunge","2 × 10 / leg","90 s",""],
+      ["Standing calf raise","3 × 12–15","60 s","Pause at the bottom."]]},
+ {d:"Sat",type:"cardio",t:"Cardio",desc:"Long and easy, your choice",dur:"45–60 min",
+  ex:[["Any steady activity","45–60 min","—","Outdoor walk, cycling, swim, badminton or football. Something you enjoy."],
+      ]},
+ {d:"Sun",type:"rest",t:"Rest",desc:"Walk, prep, measure",dur:"—",
+  ex:[["Easy walk","30 min","—","Optional, counts toward steps."],
+      ["Batch-cook chicken and rice","30 min","—","See the Cooking tab. Repeat on Wednesday."],
+      ["Waist and weight check","2 min","—","See Rules."]]}
+];
+/* Warm-ups and stretches, indexed Mon..Sun: [name, dose, note] */
+const WARM=[
+ [["Easy bike or rower","3 min","Just get warm and breathing a bit harder."],
+  ["Arm circles","10 each way","Small to big."],
+  ["Band pull-apart","2 × 15","Wakes up the upper back so the shoulders sit right on the bench."],
+  ["Scapular push-up","10","Straight arms, let the chest sink then push the floor away."],
+  ["Push-up","1 × 8–10","Slow, full range."],
+  ["Bench ramp-up sets","bar × 10, 50% × 8, 70% × 4","Then start your working sets."]],
+ [["Flat treadmill walk","3 min","Then raise the incline 2% each minute up to your target."],
+  ["Leg swings","10 / side","Front to back, then side to side."],
+  ["Ankle circles","10 / side",""]],
+ [["Easy rower","3 min","Warms back and legs together."],
+  ["Cat-cow","8 slow reps",""],
+  ["Band pull-apart","2 × 15",""],
+  ["Dead hang","2 × 20 s","Loosens lats and shoulders. Feet on a box if needed."],
+  ["Straight-arm pulldown","1 × 12, light","Feel the lats before you pull heavy."],
+  ["Pulldown ramp-up sets","50% × 10, 70% × 5","Then start your working sets."]],
+ [["Leg swings","10 / side","Front to back, then side to side."],
+  ["Bodyweight squat","10",""],
+  ["Two builds on the bike","2 × 15 s","Pick up speed to about 80% to prime for the intervals."]],
+ [["Easy bike","3 min",""],
+  ["Leg swings","10 / side","Front to back, then side to side."],
+  ["World's greatest stretch","4 / side","Lunge, elbow to instep, rotate the arm up."],
+  ["Ankle rocks","10 / side","Knee over toes against a wall. Helps squat depth."],
+  ["Glute bridge","15","Squeeze at the top."],
+  ["Bodyweight squat","15","Pause at the bottom on the last 5."],
+  ["Squat ramp-up sets","bar × 10, 50% × 6, 70% × 3","Then start your working sets."]],
+ [["Easy start","5 min","First 5 minutes of whatever you do, at a pace you could chat at."],
+  ["Leg swings","10 / side",""]],
+ []
+];
+const STRETCH=[
+ [["Doorway chest stretch","30 s / side","Forearm on the frame, step through gently."],
+  ["Cross-body shoulder stretch","30 s / side",""],
+  ["Overhead triceps stretch","30 s / side",""],
+  ["Thoracic open book","5 / side","Lie on your side, knees bent, rotate the top arm open."],
+  ["Child's pose","45 s","Walk the hands to each side for 10 s too."]],
+ [["Standing calf stretch","30 s / side","Incline walking works the calves hard."],
+  ["Kneeling hip flexor stretch","30 s / side","Squeeze the glute of the back leg."],
+  ["Standing hamstring stretch","30 s / side","Heel on a low bench, hinge forward."],
+  ["Cobra","30 s","Undoes the core work and the desk posture."]],
+ [["Lat stretch on a rack","30 s / side","Hold the post, sit the hips back and away."],
+  ["Biceps wall stretch","30 s / side","Palm on the wall behind you, turn away."],
+  ["Thread the needle","5 / side","On all fours, slide one arm under the other."],
+  ["Neck side stretch","20 s / side","Desk-job tension."],
+  ["Child's pose","45 s",""]],
+ [["Standing quad stretch","30 s / side",""],
+  ["Kneeling hip flexor stretch","30 s / side",""],
+  ["Figure-4 glute stretch","30 s / side","On your back, ankle over the opposite knee."],
+  ["Seated hamstring stretch","45 s",""]],
+ [["Couch stretch","45 s / side","Back knee on the floor against a bench. Hip flexors and quads."],
+  ["Pigeon or figure-4 stretch","45 s / side","Glutes and hips."],
+  ["Seated forward fold","45 s","Hamstrings. Reach for the shins, not the toes."],
+  ["Standing calf stretch","30 s / side",""],
+  ["Knees-to-chest rock","30 s","Eases the lower back after squats and RDLs."]],
+ [["Hip flexor stretch","45 s / side",""],
+  ["Figure-4 glute stretch","45 s / side",""],
+  ["Hamstring stretch","45 s",""],
+  ["Thoracic open book","5 / side",""],
+  ["Child's pose","60 s",""]],
+ [["Full-body stretch","10 min, optional","Any of the stretches from this week while you watch something."]]
+];
+function drills(list){return `<ul class="drill">${list.map(x=>`<li><span class="dn2">${x[0]}</span><span class="dose">${x[1]}</span>${x[2]?`<span class="note">${x[2]}</span>`:""}</li>`).join("")}</ul>`}
+const COLORS={push:"var(--push)",pull:"var(--pull)",legs:"var(--legs)",cardio:"var(--cardio)",rest:"var(--rest)"};
+const todayIdx=(new Date().getDay()+6)%7;
+let sel=todayIdx;
+function renderWeek(){
+  document.getElementById("week").innerHTML=PLAN.map((p,i)=>`<button class="day t-${p.type}${i===todayIdx?" today":""}${i===sel?" sel":""}" data-i="${i}" aria-pressed="${i===sel}"><span class="dn">${p.d}${i===todayIdx?" · today":""}</span><span class="dt">${p.t}</span><span class="dd">${p.desc}</span></button>`).join("");
+  const p=PLAN[sel];
+  const w=WARM[sel],c=STRETCH[sel];
+  document.getElementById("session").innerHTML=`<div class="grid"><div class="sess-head"><h2>${p.d} · ${p.t}</h2><span class="pill" style="background:${COLORS[p.type]}">${p.desc} · ${p.dur}</span></div>
+  <div class="phases">
+  ${w.length?`<div class="phase"><div class="phase-h"><h3>1 · Warm-up</h3><span class="label">8–10 min · targets today's muscles</span></div>${drills(w)}</div>`:""}
+  <div class="phase"><div class="phase-h"><h3>${w.length?"2 · ":""}Workout</h3></div>
+  <div class="tablewrap"><table class="ex"><thead><tr><th>Exercise</th><th>Sets × reps</th><th>Rest</th></tr></thead><tbody>${p.ex.map(e=>`<tr><td class="n">${e[0]}${e[3]?`<span class="note">${e[3]}</span>`:""}</td><td class="s">${e[1]}</td><td class="s">${e[2]}</td></tr>`).join("")}</tbody></table></div></div>
+  ${c.length?`<div class="phase"><div class="phase-h"><h3>${w.length?"3 · ":""}Stretch</h3><span class="label">${sel===6?"optional":"6–8 min · hold each, breathe slowly, no bouncing"}</span></div>${drills(c)}</div>`:""}
+  </div></div>`;
+}
+document.getElementById("week").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;sel=+b.dataset.i;renderWeek();});
+
+/* Diet */
+const COFFEE={
+  milk:{n:"Milk coffee",q:"250 ml toned milk, 1 tsp sugar",k:150,p:8},
+  protein:{n:"Protein coffee",q:"Same milk coffee with 1 scoop whey blended in (let it cool a little first)",k:270,p:32}
+};
+const LUNCH={
+  chickenrice:{n:"Chicken rice bowl",q:"150 g prepped chicken (air-fried), 200 g cooked rice, 100 g curd, cucumber and onion",k:555,p:42},
+  chickenomelette:{n:"Chicken omelette + toast",q:"2-egg omelette with 100 g shredded chicken folded in, 2 slices brown bread",k:470,p:41},
+  eggrice:{n:"Egg bhurji rice",q:"3-egg scramble with onion and tomato, 200 g cooked rice, 100 g curd",k:570,p:28},
+  chickentoast:{n:"Chicken and egg plate",q:"150 g prepped chicken, 2 sunny side up eggs, 1 slice bread",k:500,p:47}
+};
+const PRE={
+  bananaeggs:{n:"Banana + 2 eggs",q:"2 boiled or sunny side up eggs and a banana",k:245,p:13},
+  bananacurd:{n:"Banana + curd",q:"200 g curd with a banana sliced in",k:225,p:8},
+  toastegg:{n:"Egg toast",q:"2 slices bread with a 2-egg omelette",k:320,p:18}
+};
+const POST={
+  whey:{n:"Whey shake",q:"1 scoop in water",k:120,p:24},
+  wheymilk:{n:"Whey shake with milk",q:"1 scoop in 250 ml toned milk",k:270,p:32}
+};
+const DINNER={
+  paneer:{n:"Paneer sabzi night",q:"About 100 g paneer, 2 rotis, a little dal, curd",k:620,p:32},
+  soya:{n:"Soya chunk night",q:"Soya chunk sabzi (50 g dry soya), 2 rotis, curd",k:560,p:38},
+  chana:{n:"Chana or rajma night",q:"A big bowl of chana or rajma, 2 rotis, 150 g curd",k:600,p:26},
+  dalplus:{n:"Dal-sabzi + your own chicken",q:"Cook's dal, sabzi and 2 rotis, plus 100 g of your own prepped chicken on the side",k:650,p:41},
+  dal:{n:"Plain dal-sabzi night",q:"Dal, sabzi, 2 rotis, curd. Low protein, so take the protein coffee that day",k:500,p:18}
+};
+const state={c:"milk",l:"chickenrice",pr:"bananaeggs",s:"whey",d:"paneer"};
+let TARGET={k:1800,p:110};
+function opts(obj,cur){return Object.entries(obj).map(([k,v])=>`<option value="${k}"${k===cur?" selected":""}>${v.n}</option>`).join("")}
+function renderDiet(){
+  const c=COFFEE[state.c],l=LUNCH[state.l],pr=PRE[state.pr],s=POST[state.s],d=DINNER[state.d];
+  const rows=[
+    {t:"10:00",nm:"Morning",id:"sc",lab:"Morning coffee",obj:COFFEE,key:"c",det:c.q,k:c.k,p:c.p},
+    {t:"1:30",nm:"Meal 1 · Lunch",id:"sl",lab:"Lunch",obj:LUNCH,key:"l",det:l.q,k:l.k,p:l.p},
+    {t:"4:15",nm:"Meal 2 · Pre-gym",id:"sp",lab:"Pre-gym meal",obj:PRE,key:"pr",det:pr.q,k:pr.k,p:pr.p},
+    {t:"6:20",nm:"Post-gym",id:"ss",lab:"Post-gym shake",obj:POST,key:"s",det:s.q,k:s.k,p:s.p},
+    {t:"8:30",nm:"Dinner · by the cook (veg)",id:"sd",lab:"Dinner",obj:DINNER,key:"d",det:d.q,k:d.k,p:d.p},
+    {t:"any",nm:"Allowance",det:"1 chai, or a small handful of roasted chana",k:80,p:3}
+  ];
+  document.getElementById("meals").innerHTML=rows.map(r=>`<div class="meal"><span class="time">${r.t}</span><div class="what"><span class="nm">${r.nm}</span>${r.obj?`<select id="${r.id}" aria-label="${r.lab}">${opts(r.obj,state[r.key])}</select>`:""}<span class="det">${r.det}</span></div><span class="mac">${r.k} kcal<br>${r.p} g protein</span></div>`).join("");
+  const K=rows.reduce((a,r)=>a+r.k,0),P=rows.reduce((a,r)=>a+r.p,0);
+  document.getElementById("tK").textContent=K;
+  document.getElementById("tP").textContent=P+" g";
+  document.getElementById("bK").style.width=Math.min(100,K/TARGET.k*100)+"%";
+  document.getElementById("bP").style.width=Math.min(100,P/TARGET.p*100)+"%";
+  const dk=K-TARGET.k;
+  document.getElementById("lK").textContent=`target ${TARGET.k} · ${Math.abs(dk)<=100?"on target":dk>0?dk+" over, drop 50 g rice":(-dk)+" under, add 50 g rice or a banana"}`;
+  document.getElementById("lP").textContent=`target ${TARGET.p} g · ${P>=TARGET.p-5?"on target":(TARGET.p-P)+" g short, switch to the protein coffee"}`;
+  rows.filter(r=>r.obj).forEach(r=>document.getElementById(r.id).addEventListener("change",e=>{state[r.key]=e.target.value;renderDiet();}));
+}
+
+/* Recipes */
+const RECIPES=[
+ {n:"Prepped chicken",set:"180°C · 16–18 min · flip at 9",ing:"2 to 3 portions (150 g each) of your marinated chicken, cut into 1-inch pieces or thin fillets.",steps:"Spread in one layer, don't pile it up. Done when the thickest piece is white inside with no pink. Box each portion; reheat 3 min at 170°C."},
+ {n:"Rice, one pot",set:"1 cup rice : 2 cups water · 12–15 min",ing:"1 cup rice, rinsed twice, 2 cups water, pinch of salt.",steps:"Boil the water, add rice, lid on, lowest flame for 12 to 15 min until the water is gone. Rest 5 min with the lid on. Makes about 3 servings of 200 g."},
+ {n:"Masala omelette with chicken",set:"Pan · medium flame · 4 min",ing:"2 eggs, chopped onion and green chilli, salt, 100 g shredded cooked chicken, 1 tsp oil.",steps:"Whisk eggs with onion, chilli and salt. Pour into the hot oiled pan, scatter chicken on one half, fold when the top is almost set."},
+ {n:"Paneer tikka",set:"180°C · 10–12 min · shake at 6",ing:"100 g paneer cubes, half capsicum and half onion in chunks, 2 tbsp curd, 1 tsp tikka masala, pinch of salt, chaat masala to finish.",steps:"Coat paneer and veg in the curd and masala. Air fry until edges char. Sprinkle chaat masala and lemon."},
+ {n:"Boiled eggs, no pot",set:"130°C · 15 min (hard) · 12 min (jammy)",ing:"Eggs straight from the fridge.",steps:"Put eggs in the basket, no preheat. Move them to cold water for 5 min, then peel. Make 6 to 9 at once; they keep 5 days in the fridge unpeeled."},
+ {n:"Egg and veg muffins",set:"160°C · 12–14 min",ing:"3 eggs + 3 whites, chopped onion, tomato, capsicum, green chilli, salt, pepper. Silicone cups or a small steel bowl.",steps:"Whisk everything, pour into greased cups, air fry until set in the middle. Good for lunch with rotis when you're out of chicken."}
+];
+document.getElementById("recipes").innerHTML=RECIPES.map(r=>`<div class="card recipe"><h3>${r.n}</h3><span class="set">${r.set}</span><p><b>You need:</b> ${r.ing}</p><p>${r.steps}</p></div>`).join("");
+
+/* Targets */
+function calc(){
+  const w=+document.getElementById("cw").value||56,h=+document.getElementById("ch").value||163,a=+document.getElementById("ca").value||25,s=document.getElementById("cs").value;
+  const bmr=10*w+6.25*h-5*a+(s==="m"?5:-161);
+  const m=Math.round(bmr*1.45/10)*10;
+  const t=Math.round((m-300)/50)*50;
+  const p=Math.round(w*2/5)*5;
+  const f=Math.round(w*0.8);
+  const c=Math.max(0,Math.round((t-p*4-f*9)/4));
+  document.getElementById("oM").textContent=m;
+  document.getElementById("oT").textContent=t;
+  document.getElementById("oP").textContent=p;
+  document.getElementById("oF").textContent=f+" · "+c;
+  document.getElementById("hdrK").textContent="~"+t+" kcal";
+  document.getElementById("hdrP").textContent="~"+p+" g";
+  TARGET={k:t,p:p};
+  renderDiet();
+}
+document.getElementById("calc").addEventListener("input",calc);
+
+/* Tabs */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function show(name){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
+  document.querySelectorAll("section.panel").forEach(s=>s.hidden=s.id!=="p-"+name);
+  try{localStorage.setItem("tab",name)}catch(e){}
+}
+tabs.forEach(b=>b.addEventListener("click",()=>show(b.dataset.tab)));
+renderWeek();calc();
+let start=(location.hash||"").slice(1);
+if(!tabs.some(b=>b.dataset.tab===start)){try{start=localStorage.getItem("tab")||"week"}catch(e){start="week"}}
+if(!tabs.some(b=>b.dataset.tab===start))start="week";
+show(start);
+</script>
+
+</body></html>
