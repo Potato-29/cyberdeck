@@ -1,9 +1,9 @@
 # HUD — React dashboard
 
-`hud/` is the React rewrite of `dashboard.html`: a bento grid of widgets with
-spring animations, built for **the phone in landscape** (roughly 800×360 to
-915×412 CSS px). It works in portrait as a single scrolling column, but that
-layout isn't tuned.
+`hud/` is the React rewrite of `dashboard.html`: an instrument-panel look (flat
+dark panels, one mono typeface, one orange accent, segmented LED meters) built
+for **the phone in landscape** (roughly 800×360 to 915×412 CSS px). It works in
+portrait as a single scrolling column, but that layout isn't tuned.
 
 It runs **side by side** with the old page: `/dashboard` is unchanged and the new
 one lives at `/hud`. It isn't at `/deck` because `/deck/*` is already the PC
@@ -21,7 +21,7 @@ needs no Node toolchain. `webhook_new.py` serves it from two routes:
 | Route | Auth | Serves |
 | --- | --- | --- |
 | `GET /hud` | `WEBHOOK_TOKEN` | `hud/dist/index.html` |
-| `GET /hud/assets/<file>` | none | hashed JS/CSS (no secrets in them; a `<script>` tag can't send a token) |
+| `GET /hud/assets/<file>` | none | hashed JS/CSS and the font (no secrets in them; a `<script>` tag can't send a token) |
 
 The page reads `?token=` off its own URL and re-sends it on every API call
 (`src/api.ts`), the same contract as `dashboard.html`. **No new backend
@@ -30,63 +30,58 @@ endpoints:** it uses `/dashboard/data`, `/restart`, `/stop`, `/service/alert`,
 
 ## Pages
 
-These are the same four groupings as the old deck selector. Change page by
-swiping left/right, tapping the rail, or using the arrow keys.
+The same four groupings as the old deck selector. Change page with the tabs
+along the top, by flicking left/right, or with the arrow keys.
 
-| Page | Tiles |
+| Page | Panels |
 | --- | --- |
-| Core | Services (start/stop, alert mute; down services float to the top), Battery ring, Wi-Fi, Control (quick actions + cat feeder) |
-| Vitals | PC CPU/GPU rings with temps, RAM, fan · deck CPU/RAM/disk rings · uptime, storage, memory |
-| Periph | Weather · Forza live telemetry (LAN only — the tunnel is https, so the ws:// socket is blocked) · Tech news (tap ⤢ to expand) |
-| Deck | PC mic/speaker mute · app launch grid |
+| CORE | `SVC` services (start/stop, alert mute; down services float to the top), `BAT` battery, `NET` Wi-Fi, `ACT` quick actions + cat feeder |
+| VITALS | `PC` CPU/GPU load, temps, RAM, fan · `DECK` CPU/RAM/disk · `SYS` uptime, storage, memory |
+| PERIPH | `WX` weather · `FORZA` live telemetry (LAN only — the tunnel is https, so the ws:// socket is blocked) · `NEWS` (tap `[ + ]` to expand) |
+| DECK | `AUDIO` PC mic/speaker mute · `LAUNCH` app grid |
 
 Stopping `cloudflared` or `webhook`, and any action with `"confirm": true` in
-`actions.json`, opens an in-page confirm sheet first.
+`actions.json`, opens an in-page confirm dialog first.
 
-## Stack
+## Look
 
-- Vite + React 19 + TypeScript. The only runtime dependency is `motion`.
-- Motion is loaded through `LazyMotion` + `m.*` components, with
-  `MotionConfig reducedMotion="user"`. Springs drive the numbers
-  (`fx/AnimatedNumber.tsx`), rings and bars (`fx/Ring.tsx`), page transitions,
-  the rail pill (`layoutId`), and the news sheet morph.
-- The background (`fx/Orbs.tsx`) is three blurred divs drifting on transforms, in
-  the style of React Bits' Aurora but without WebGL, to save the phone's GPU.
-- Theme: light and dark follow the system, and the rail button overrides it
-  (stored in `localStorage` as `hud-theme`). The last page is remembered as
-  `hud-page`.
-- Polling (`hooks/usePoll.ts`) runs every 4s for `/dashboard/data` and every 8s
-  for the PC link. It pauses while the tab is hidden and backs off on errors.
+- Flat fills and 1px hairlines only: no shadows, blur, translucency or
+  gradients (apart from the static dot grid behind the panels).
+- JetBrains Mono everywhere (one bundled woff2, no CDN). Labels are tiny
+  tracked caps; readings are large tabular numerals.
+- Orange is the accent for anything active or pressable. Green/red are
+  reserved for up/down and for threshold colours on meters.
+- Meters are rows of discrete cells (`ui/Meter.tsx`), not arcs or bars.
+- Dark and a light "paper" theme. They follow the system, and the toggle in
+  the top bar overrides it (stored in `localStorage` as `hud-theme`). The last
+  page is remembered as `hud-page`.
 
-## Performance on the deck
+## Motion
 
-The deck (Honor Play) has a much weaker CPU/GPU than a current phone, so:
+Written for the deck (Honor Play, Kirin 970), whose GPU can't carry an
+animation library. There is none: no JavaScript runs per frame. The whole
+budget is in `theme.css` → "Motion":
 
-- **Nothing that loops runs in JavaScript.** The background orbs, the
-  spinners and the down-service ripples are CSS keyframes, which run on the
-  compositor. Rings and bars use CSS transitions. Motion only handles one-off
-  interactions: page changes, taps, the sheet.
-- The orbs are radial gradients, never `filter: blur`. Tiles enter with a
-  translate and fade, never a scale. Chips and service rows measure their
-  layout only when their label or order changes (`layoutDependency`), not on
-  every 4s poll.
-- **Lite mode** (`src/perf.tsx`) cuts further: the whole page fades as one
-  layer, numbers are set instead of counted, tiles are opaque, the background
-  is static, and scroll-edge masks are off. It switches on by itself if the
-  first page animates in below ~45fps. To force it on the deck, open the page
-  once with `&lite=1`; the choice is remembered (`&lite=0` forces it off,
-  `&lite=auto` goes back to detecting).
+- a 100ms opacity fade when the page changes (and when a dialog opens);
+- a 350ms background flash on a reading when its value changes (`ui/Value.tsx`);
+- a 200ms colour transition on meter cells;
+- two blinking elements: the LED of a down service, and the clock colon.
 
-Under 6× CPU throttling in headless Chromium, the old build ran at a median of
-50 ms per frame (20 fps) while switching pages; this one runs at 16.7 ms (60 fps).
+All of these are opacity or small repaints. A flick is judged on release; the
+page does not follow the finger. `prefers-reduced-motion` turns it all off.
+
+Other performance choices: polling (`hooks/usePoll.ts`) runs every 4s for
+`/dashboard/data` and every 8s for the PC link, pauses while the tab is hidden
+and backs off on errors; Forza packets that don't change the rounded values
+don't re-render; the clock re-renders every 10s.
 
 ## Notch
 
 The deck's browser reports `env(safe-area-inset-*)` as 0, so in fullscreen the
-rail sat under the notch. `useNotchInset()` pads the notch side (left at
-orientation angle 90, right at 270) whenever a touch device's viewport spans
-the full long edge of the screen. The padding is 32px; to change it, open the
-page once with `&notch=<px>`.
+top bar sat under the notch. `useNotchInset()` (`src/notch.ts`) pads the notch
+side (left at orientation angle 90, right at 270) whenever a touch device's
+viewport spans the full long edge of the screen. The padding is 32px; to change
+it, open the page once with `&notch=<px>` (remembered).
 
 ## Develop and deploy
 
@@ -99,12 +94,8 @@ npm run dev     # http://localhost:5174/hud/?token=...  (API proxied to 127.0.0.
 npm run build   # writes hud/dist — commit it
 ```
 
-On the phone, copy `hud/dist/` and `webhook_new.py` into `~/cyberdeck/`, then
-restart the hub:
-
-```sh
-tmux kill-session -t webhook && tmux new-session -d -s webhook 'python3 ~/cyberdeck/webhook_new.py'
-```
+On the phone, copy `hud/dist/` into `~/cyberdeck/hud/` (no hub restart is needed
+unless `webhook_new.py` changed), then reload the page.
 
 Deck app icons live in `src/icons.ts`, copied from `ICON_IMAGES` in
 `dashboard.html`. Add new keys in both places while the two pages coexist.

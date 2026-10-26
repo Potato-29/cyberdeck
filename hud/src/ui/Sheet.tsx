@@ -1,39 +1,24 @@
-import { AnimatePresence, m } from 'motion/react'
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 
-const spring = { type: 'spring', stiffness: 380, damping: 34 } as const
-
-/** Detail sheet that morphs out of the tile sharing its layoutId. */
-export function Sheet({ id, open, onClose, children }: {
-  id: string
+/** Plain modal: scrim + box, 120ms opacity fade in via CSS (.pop). */
+export function Modal({ open, onClose, wide, children }: {
   open: boolean
   onClose: () => void
+  wide?: boolean
   children: ReactNode
 }) {
+  if (!open) return null
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <m.div className="scrim" onClick={onClose}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <div className="sheet-wrap">
-            <m.div className="sheet" layoutId={'tile-' + id} transition={spring}>
-              <m.div
-                style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}
-                initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.12 } }}
-                exit={{ opacity: 0, transition: { duration: 0.08 } }}
-              >
-                {children}
-              </m.div>
-            </m.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="modal-wrap">
+        <div className={'modal pop' + (wide ? ' wide' : '')}>{children}</div>
+      </div>
+    </>
   )
 }
 
-// ── Confirm: an animated replacement for window.confirm ──
+// ── Confirm: a replacement for window.confirm ──
 
 interface Ask { title: string; body: string; action: string; danger?: boolean }
 type ConfirmFn = (a: Ask) => Promise<void>
@@ -58,30 +43,20 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={confirm}>
       {children}
-      <AnimatePresence>
+      <Modal open={!!ask} onClose={() => settle.current(false)}>
         {ask && (
           <>
-            <m.div className="scrim" onClick={() => settle.current(false)}
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-            <div className="sheet-wrap">
-              <m.div className="sheet confirm"
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={spring}
-              >
-                <h3>{ask.title}</h3>
-                <p>{ask.body}</p>
-                <div className="row">
-                  <m.button className="chip" whileTap={{ scale: 0.95 }} onClick={() => settle.current(false)}>Cancel</m.button>
-                  <m.button className={'chip ' + (ask.danger ? 'danger' : '')} whileTap={{ scale: 0.95 }}
-                    onClick={() => settle.current(true)}>{ask.action}</m.button>
-                </div>
-              </m.div>
+            <div className="lbl" style={{ marginBottom: 8 }}>{ask.title}</div>
+            <p className="modal-body">{ask.body}</p>
+            <div className="keys">
+              <button className="key grow" onClick={() => settle.current(false)}>CANCEL</button>
+              <button className={'key grow ' + (ask.danger ? 'bad' : 'acc')} onClick={() => settle.current(true)}>
+                {ask.action.toUpperCase()}
+              </button>
             </div>
           </>
         )}
-      </AnimatePresence>
+      </Modal>
     </Ctx.Provider>
   )
 }

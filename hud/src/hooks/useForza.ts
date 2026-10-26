@@ -27,7 +27,10 @@ export function useForza(): Telemetry | null {
           const d = JSON.parse(ev.data)
           last = Date.now()
           const g = d.gear === 0 ? 'R' : d.gear === 11 ? 'N' : String(d.gear ?? '–')
-          setT({ rpm: Math.round((d.rpm || 0) / 100) * 100, speed: Math.round(d.speed_kmh || 0), gear: g })
+          const next = { rpm: Math.round((d.rpm || 0) / 100) * 100, speed: Math.round(d.speed_kmh || 0), gear: g }
+          // Packets arrive far faster than the rounded values change; handing
+          // back the same object skips the re-render on the deck's slow CPU.
+          setT((p) => (p && p.rpm === next.rpm && p.speed === next.speed && p.gear === next.gear ? p : next))
         } catch { /* malformed packet */ }
       }
       ws.onclose = () => {
