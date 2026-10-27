@@ -54,14 +54,25 @@ it) — grab it from `bw_web_builds` rather than compiling Bitwarden's own clien
 repo (which needs Node/npm):
 
 ```sh
-WEB_VAULT_VERSION=$(curl -s https://api.github.com/repos/dani-garcia/bw_web_builds/releases/latest \
-  | grep -oP '"tag_name": "\K[^"]+')
 cd ~
-curl -L -o web-vault.tar.gz \
-  "https://github.com/dani-garcia/bw_web_builds/releases/download/${WEB_VAULT_VERSION}/bw_web_${WEB_VAULT_VERSION#v}.tar.gz"
+# Resolve the latest tag via a plain github.com redirect, not api.github.com —
+# the API's unauthenticated rate limit (60 req/hour per IP) is easy to hit and
+# a rate-limited response has no tag_name, which silently builds a dead URL.
+TAG=$(curl -sI -o /dev/null -w '%{redirect_url}' https://github.com/dani-garcia/bw_web_builds/releases/latest \
+  | sed -E 's#.*/tag/##')
+
+# -f makes curl fail loudly on a bad request instead of saving the error
+# page as if it were the tarball (symptom: `tar` says "not in gzip format")
+curl -fL -o web-vault.tar.gz \
+  "https://github.com/dani-garcia/bw_web_builds/releases/download/${TAG}/bw_web_${TAG#v}.tar.gz"
 tar xzf web-vault.tar.gz
 rm web-vault.tar.gz
 ```
+
+If `$TAG` comes back empty (rate-limited on plain `github.com` too — rarer, but
+possible on a carrier-NAT IP), just read the version off
+`https://github.com/dani-garcia/bw_web_builds/releases/latest` in a browser and
+hardcode it instead.
 
 This extracts to `~/web-vault` (i.e. `/root/web-vault` in proot). Vaultwarden
 looks for a `web-vault/` folder relative to its working directory by default,
