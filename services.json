@@ -182,7 +182,7 @@
       "mechanism": "tmux",
       "value": "vaultwarden"
     },
-    "start": "tmux new-session -d -s vaultwarden 'proot-distro login ubuntu -- bash -c \"ROCKET_PORT={VAULTWARDEN_PORT} DATA_FOLDER=/root/vaultwarden-data ADMIN_TOKEN={VAULTWARDEN_ADMIN_TOKEN} SIGNUPS_ALLOWED=false vaultwarden\"'",
+    "start": "tmux new-session -d -s vaultwarden 'proot-distro login ubuntu -- bash -c \"ROCKET_PORT={VAULTWARDEN_PORT} DATA_FOLDER=/root/vaultwarden-data ADMIN_TOKEN={VAULTWARDEN_ADMIN_TOKEN} SIGNUPS_ALLOWED=false /root/vaultwarden-bin/vaultwarden\"'",
     "stop": "tmux kill-session -t vaultwarden",
     "tmux_session": "vaultwarden",
     "alert": true,

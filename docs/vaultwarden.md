@@ -37,11 +37,14 @@ anything else heavy alongside it. It needs modest RAM for the server binary
 itself, but linking can spike — if the build gets OOM-killed, that's the signal
 to free up memory (close other proot sessions) and retry rather than a build bug.
 
-Install the resulting binary onto `PATH` inside proot, so the `services.json`
-start command (which just invokes `vaultwarden`) can find it:
+Install the resulting binary to a fixed path — the `services.json` start
+command invokes it by absolute path rather than relying on `PATH` (some
+proot-distro Ubuntu rootfs images are minimal enough that `/usr/local/bin`
+doesn't even exist):
 
 ```sh
-cp target/release/vaultwarden /usr/local/bin/vaultwarden
+mkdir -p /root/vaultwarden-bin
+cp target/release/vaultwarden /root/vaultwarden-bin/vaultwarden
 ```
 
 ## Web vault UI
