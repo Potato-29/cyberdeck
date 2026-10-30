@@ -776,6 +776,130 @@ def dashboard_page():
     return jsonify({"error": "dashboard.html not found"}), 404
 
 
+# ── Spotify (HUD music page) ─────────────────────────────
+# Optional: without the three keys the routes answer {"configured": false} and
+# the hub still boots. Get the refresh token once with spotify_auth.py.
+# Playback control needs Spotify Premium; reading now-playing does not.
+SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
+SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+SPOTIFY_REFRESH_TOKEN = os.environ.get("SPOTIFY_REFRESH_TOKEN", "")
+SPOTIFY_API = "https://api.spotify.com/v1/me/player"
+# Access tokens live an hour; keep the current one in memory.
+_spotify_token = {"value": "", "expires": 0.0}
+
+
+def spotify_configured() -> bool:
+    return bool(SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET and SPOTIFY_REFRESH_TOKEN)
+
+
+def spotify_access_token() -> str:
+    if _spotify_token["value"] and time.time() < _spotify_token["expires"] - 60:
+        return _spotify_token["value"]
+    resp = requests.post(
+        "https://accounts.spotify.com/api/token",
+        data={"grant_type": "refresh_token", "refresh_token": SPOTIFY_REFRESH_TOKEN},
+        auth=(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET),
+        timeout=5,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    _spotify_token["value"] = data["access_token"]
+    _spotify_token["expires"] = time.time() + data.get("expires_in", 3600)
+    return _spotify_token["value"]
+
+
+def spotify_call(method: str, path: str = "", **params):
+    return requests.request(
+        method,
+        SPOTIFY_API + path,
+        headers={"Authorization": f"Bearer {spotify_access_token()}"},
+        params=params,
+        timeout=5,
+    )
+
+
+def spotify_error(resp) -> str:
+    try:
+        return resp.json()["error"]["message"]
+    except Exception:
+        return f"Spotify HTTP {resp.status_code}"
+
+
+@app.route("/spotify/now", methods=["GET"])
+def spotify_now():
+    """What's playing, on which device, at what volume. Polled by the HUD."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if not spotify_configured():
+        return jsonify({"configured": False}), 200
+    try:
+        resp = spotify_call("GET", additional_types="episode")
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 502
+    if resp.status_code == 204:  # no active device
+        return jsonify({"configured": True, "active": False}), 200
+    if resp.status_code != 200:
+        return jsonify({"status": "error", "message": spotify_error(resp)}), 502
+
+    d = resp.json()
+    item = d.get("item") or {}
+    device = d.get("device") or {}
+    # Tracks carry art on the album; podcast episodes carry it on the item.
+    images = (item.get("album") or {}).get("images") or item.get("images") or []
+    by_size = sorted(images, key=lambda i: i.get("width") or 0)
+    return jsonify({
+        "configured": True,
+        "active": True,
+        "playing": bool(d.get("is_playing")),
+        "title": item.get("name", ""),
+        "artist": ", ".join(a.get("name", "") for a in item.get("artists") or [])
+                  or (item.get("show") or {}).get("name", ""),
+        "album": (item.get("album") or {}).get("name", ""),
+        "art": by_size[-1]["url"] if by_size else "",
+        # The smallest image, stretched and blurred, is the page background.
+        "art_small": by_size[0]["url"] if by_size else "",
+        "progress_ms": d.get("progress_ms") or 0,
+        "duration_ms": item.get("duration_ms") or 0,
+        "device": device.get("name", ""),
+        "volume": device.get("volume_percent"),
+        "supports_volume": bool(device.get("supports_volume", True)),
+    }), 200
+
+
+SPOTIFY_OPS = {
+    "play": ("PUT", "/play"),
+    "pause": ("PUT", "/pause"),
+    "next": ("POST", "/next"),
+    "previous": ("POST", "/previous"),
+}
+
+
+@app.route("/spotify/control", methods=["POST"])
+def spotify_control():
+    """op = play | pause | next | previous, or op=volume&level=0..100."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if not spotify_configured():
+        return jsonify({"status": "error", "message": "Spotify not configured"}), 503
+    op = request.args.get("op", "")
+    try:
+        if op == "volume":
+            level = max(0, min(100, int(request.args.get("level", ""))))
+            resp = spotify_call("PUT", "/volume", volume_percent=level)
+        elif op in SPOTIFY_OPS:
+            method, path = SPOTIFY_OPS[op]
+            resp = spotify_call(method, path)
+        else:
+            return jsonify({"status": "error", "message": f"Unknown op: {op}"}), 400
+    except ValueError:
+        return jsonify({"status": "error", "message": "level must be 0-100"}), 400
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 502
+    if resp.status_code >= 400:
+        return jsonify({"status": "error", "message": spotify_error(resp)}), 502
+    return jsonify({"status": "ok"}), 200
+
+
 # React HUD (hud/) — built bundle is committed in hud/dist, so the phone needs
 # no toolchain. Lives at /hud, not /deck, because /deck/* is the PC launcher API.
 HUD_DIST = Path(__file__).resolve().parent / "hud" / "dist"

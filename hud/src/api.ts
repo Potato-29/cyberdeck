@@ -64,3 +64,19 @@ export function splitReading(v?: string | number): { n: number | null; unit: str
   const n = parseFloat(s)
   return { n: Number.isFinite(n) ? n : null, unit: s.replace(/^[\s\d.,-]+/, '').trim() }
 }
+
+export interface SpotifyNow {
+  configured: boolean
+  active?: boolean
+  playing?: boolean
+  title?: string
+  artist?: string
+  album?: string
+  art?: string
+  art_small?: string
+  progress_ms?: number
+  duration_ms?: number
+  device?: string
+  volume?: number | null
+  supports_volume?: boolean
+}

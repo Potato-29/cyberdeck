@@ -312,6 +312,79 @@ p { margin: 0; }
 .audio-key:active { background: var(--cell-off); }
 .audio-key[disabled] { opacity: 0.4; }
 
+/* ── Music ─────────────────────────────────────────── */
+/* The one place the theme's no-blur rule bends: the background is the 64px
+   album thumbnail, stretched and blurred. It's a static layer that only
+   repaints when the track changes, so the GPU pays once per song. */
+
+.music {
+  grid-area: 1 / 1 / 3 / 5;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 4fr) minmax(0, 1fr);
+}
+.music-bg {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+  filter: blur(24px) saturate(1.3);
+  transform: scale(1.2);
+}
+.music-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.music-empty { grid-area: 1 / 1 / 3 / 4; display: grid; place-items: center; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }
+
+.music-zone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text);
+}
+.music-zone > svg { width: 44px; height: 44px; opacity: 0.85; }
+.music-zone:active:not([disabled]) { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.music-zone[disabled] { cursor: default; }
+.music-zone[disabled] > svg { opacity: 0.25; }
+
+.music-mid { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 8px; }
+.music-art { flex: 1; min-height: 0; width: 100%; container-type: size; display: grid; place-items: center; position: relative; }
+.music-art img, .music-art-none {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  object-fit: cover;
+  border-radius: var(--r);
+}
+.music-art-none { background: var(--cell-off); }
+.music-art img.paused { opacity: 0.55; }
+.music-state { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.music-state svg { width: 48px; height: 48px; fill: var(--text); }
+.music-meta { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 0 6px; min-width: 0; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; }
+.music-meta .t { font-size: 13px; letter-spacing: 0.02em; max-width: 100%; }
+.music-meta .a { font-size: 10px; font-weight: 600; max-width: 100%; }
+
+.music-vol {
+  grid-column: 1 / 4;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-top: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+.music-vol .fill { position: absolute; inset: 0 auto 0 0; background: var(--acc-bg); border-right: 2px solid var(--acc); pointer-events: none; }
+.music-vol > span { position: relative; }
+.music-vol .info { flex: 1; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--dim); text-transform: uppercase; }
+.music-vol .pct { font-size: 18px; font-weight: 700; }
+.music-vol.off { cursor: default; opacity: 0.45; }
+
 /* ── Short landscape (most phones): tighten ────────── */
 
 @media (orientation: landscape) and (max-height: 390px) {
@@ -337,6 +410,7 @@ p { margin: 0; }
     grid-auto-rows: minmax(150px, auto);
   }
   .page > .panel { grid-column: span 2 !important; grid-row: auto !important; }
+  .page > .music { grid-column: span 2; grid-row: auto; height: calc(100dvh - 60px); }
 }
 
 /* ── Motion: the whole budget ──────────────────────── */
