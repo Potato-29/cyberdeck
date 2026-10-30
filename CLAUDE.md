@@ -49,7 +49,9 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
   `/standup*` on 2122. Persists to an append-only JSONL file.
 - **`dashboard.html`** — 1400-line single-file cyberdeck HUD, served by `send_file`.
 - **`hud/`** — the React replacement for it (instrument-panel look, CSS-only
-  motion, landscape-first), served by `webhook_new.py` at `/hud`. Runs side by side with
+  motion, landscape-first), served by `webhook_new.py` at `/hud`. Its MUSIC tab
+  controls Spotify through the hub's `/spotify/*` routes (`spotify_auth.py`
+  gets the refresh token once). Runs side by side with
   `/dashboard` until it takes over. See [docs/hud.md](docs/hud.md).
 - **`forza/`** — standalone aiohttp service (HTTP + WebSocket) for the Forza telemetry HUD.
 - **`ideas/`** — standalone idea board. **The exception to most rules below.**

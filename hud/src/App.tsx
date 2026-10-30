@@ -6,15 +6,17 @@ import { IcExpand, IcMoon, IcShrink, IcSun } from './ui/icons'
 import { Led } from './ui/Panel'
 import { CorePage } from './widgets/Core'
 import { DeckPage } from './widgets/Deck'
+import { MusicPage } from './widgets/Music'
 import { PeriphPage } from './widgets/Periph'
 import { VitalsPage } from './widgets/Vitals'
 
-// Same four groupings as the original deck selector.
+// The four groupings of the original deck selector, plus MUSIC.
 const PAGES: { key: string; label: string; Page: ComponentType }[] = [
   { key: 'core', label: 'CORE', Page: CorePage },
   { key: 'vitals', label: 'VITALS', Page: VitalsPage },
   { key: 'periph', label: 'PERIPH', Page: PeriphPage },
   { key: 'deck', label: 'DECK', Page: DeckPage },
+  { key: 'music', label: 'MUSIC', Page: MusicPage },
 ]
 
 function initialPage() {

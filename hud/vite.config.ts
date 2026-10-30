@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // webhook_new.py serves the built bundle at /hud (assets under /hud/assets),
 // so in dev every API path is proxied to that same Flask process on 2122.
 const API = ['/dashboard', '/restart', '/stop', '/service', '/actions', '/action',
-  '/feed', '/door-open', '/door-close', '/feeder-status', '/deck', '/audio']
+  '/feed', '/door-open', '/door-close', '/feeder-status', '/deck', '/audio', '/spotify']
 
 export default defineConfig({
   base: '/hud/',

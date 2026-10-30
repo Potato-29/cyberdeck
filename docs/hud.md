@@ -24,13 +24,13 @@ needs no Node toolchain. `webhook_new.py` serves it from two routes:
 | `GET /hud/assets/<file>` | none | hashed JS/CSS and the font (no secrets in them; a `<script>` tag can't send a token) |
 
 The page reads `?token=` off its own URL and re-sends it on every API call
-(`src/api.ts`), the same contract as `dashboard.html`. **No new backend
-endpoints:** it uses `/dashboard/data`, `/restart`, `/stop`, `/service/alert`,
-`/actions/*`, the feeder routes, `/deck/*` and `/audio/*`.
+(`src/api.ts`), the same contract as `dashboard.html`. It uses `/dashboard/data`,
+`/restart`, `/stop`, `/service/alert`, `/actions/*`, the feeder routes, `/deck/*`
+and `/audio/*`, plus `/spotify/*` (added for the MUSIC page, below).
 
 ## Pages
 
-The same four groupings as the old deck selector. Change page with the tabs
+The four groupings of the old deck selector, plus MUSIC. Change page with the tabs
 along the top, by flicking left/right, or with the arrow keys.
 
 | Page | Panels |
@@ -39,9 +39,44 @@ along the top, by flicking left/right, or with the arrow keys.
 | VITALS | `PC` CPU/GPU load, temps, RAM, fan · `DECK` CPU/RAM/disk · `SYS` uptime, storage, memory |
 | PERIPH | `WX` weather · `FORZA` live telemetry (LAN only — the tunnel is https, so the ws:// socket is blocked) · `NEWS` (tap `[ + ]` to expand) |
 | DECK | `AUDIO` PC mic/speaker mute · `LAUNCH` app grid |
+| MUSIC | Spotify now-playing: prev · album art (tap = play/pause) · next, volume strip below |
 
 Stopping `cloudflared` or `webhook`, and any action with `"confirm": true` in
 `actions.json`, opens an in-page confirm dialog first.
+
+## Music
+
+The MUSIC page is three equal tap zones over a blurred copy of the album art —
+previous, the art itself (play/pause) and next — taking 80% of the height, and
+a full-width volume strip in the bottom 20%. Drag anywhere on the strip; the
+volume is sent once on release. The strip swallows touches so a drag on it is
+never read as a page flick.
+
+It talks to the Spotify Web API through the hub, so it controls whatever device
+Spotify is playing on (the phone, the PC, a speaker):
+
+| Route | Does |
+| --- | --- |
+| `GET /spotify/now` | track, artist, art URLs, playing, device, volume. `{"configured": false}` without keys; `"active": false` when nothing is playing |
+| `POST /spotify/control?op=play\|pause\|next\|previous` | playback |
+| `POST /spotify/control?op=volume&level=0..100` | volume |
+
+`/spotify/now` is polled every 3s, and only while the MUSIC tab is open.
+Play/pause/skip/volume need **Spotify Premium**; reading now-playing doesn't.
+Some devices report `supports_volume: false` (the strip greys out).
+
+One-time setup:
+
+1. Create an app at <https://developer.spotify.com/dashboard>, tick *Web API*,
+   and add the redirect URI `http://127.0.0.1:8888/callback`.
+2. Put `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `.env`.
+3. Run `python3 spotify_auth.py`, open the URL it prints, approve, and paste
+   back the URL you land on (the page itself fails to load — that's expected).
+4. Add the `SPOTIFY_REFRESH_TOKEN=` line it prints to `.env` and restart the hub.
+
+The background is the one exception to "no blur" below: the 64px thumbnail,
+stretched and blurred. It's a static layer, repainted only when the track
+changes.
 
 ## Look
 
