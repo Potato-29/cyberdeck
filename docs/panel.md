@@ -109,6 +109,11 @@ HTTP headers.
   the panel goes back to the home page.
 - **Live edits:** the panel re-reads the config every 5s and follows a new `rev`.
 - **Screen:** the panel asks for a screen wake lock while it is visible.
+- **Fullscreen:** the ⛶ button at the bottom-right hides Chrome's bars and
+  locks landscape. Once you've used it, the panel goes fullscreen again on the
+  first tap after a reload, or after Chrome's back gesture drops out of it.
+  That tap still does its normal job. Only the button turns this off, and the
+  choice is remembered in the browser (`panel-fs` in localStorage).
 - **Portrait:** widgets stack two-up in reading order.
 
 ## Widgets

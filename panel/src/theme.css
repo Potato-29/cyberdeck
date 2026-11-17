@@ -329,3 +329,17 @@ input[type='range'] { flex: 1; min-width: 0; accent-color: #f2f2f7; height: 28px
 @container (max-height: 38px) {
   .key-ic { display: none; }
 }
+
+/* Fullscreen toggle: bottom-right, in the padding strip under the grid. */
+.fs-btn {
+  position: absolute;
+  right: max(6px, var(--notch-r));
+  bottom: 0;
+  width: 32px; height: 18px; /* fits the 18px strip under the grid */
+  padding: 2px 9px; border: 0; background: none; cursor: pointer;
+  opacity: 0.4;
+  z-index: 5;
+}
+.fs-btn:hover, .fs-btn:active { opacity: 1; }
+.fs-btn svg { width: 100%; height: 100%; fill: none; stroke: var(--tx); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (orientation: portrait) { .fs-btn { position: fixed; bottom: 4px; } }

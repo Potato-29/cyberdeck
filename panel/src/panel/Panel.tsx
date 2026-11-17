@@ -7,6 +7,7 @@ import { useNotchInset } from '../notch'
 import type { Catalog, Config, PanelEvent } from '../types'
 import { ConfirmProvider } from '../ui/Confirm'
 import { ToastProvider, useToast } from '../ui/Toast'
+import { FullscreenButton, useAutoFullscreen } from './Fullscreen'
 import { Grid } from './Grid'
 
 interface EventsResp { boot: string; seq: number; events: PanelEvent[] }
@@ -16,6 +17,7 @@ const HOLD_AFTER_TOUCH = 10_000 // a page switch waits this long after the last 
 export function PanelApp() {
   useNotchInset()
   useWakeLock()
+  useAutoFullscreen()
   // Config is re-read every 5s; a save in the editor bumps rev and the panel
   // follows within a few seconds, same as PhoneBox.
   const config = usePoll(() => getJson<Config>('/panel/config'), 5000)
@@ -174,6 +176,7 @@ function Panel({ config, catalog }: { config: Config; catalog: Catalog }) {
               ))}
             </div>
           )}
+          <FullscreenButton />
           {pending && (
             <div className="countdown fade">
               <span>{held ? `Switching to ${pendingTitle} when you’re done…` : `Switching to ${pendingTitle} in ${pending.left}…`}</span>
