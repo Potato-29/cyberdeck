@@ -31,6 +31,7 @@ The most collision-prone thing in the repo. Check here before picking one.
 | 8000 | `forza/forza_listener.py` (UDP 5300 in) | phone |
 | 8085 | LibreHardwareMonitor telemetry | **PC** |
 | 8086 | `pc-deck-agent.py` app launcher | **PC** |
+| 8765 | stream-clipper dashboard (separate repo; proxied at `/clipper/`) | **PC** |
 
 Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000,
 `ideas` → 2124. Adding one is a 3-step manual process on the phone —
@@ -52,7 +53,9 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
   motion, landscape-first), served by `webhook_new.py` at `/hud`. Its MUSIC tab
   controls Spotify through the hub's `/spotify/*` routes (`spotify_auth.py`
   gets the refresh token once). Runs side by side with
-  `/dashboard` until it takes over. See [docs/hud.md](docs/hud.md).
+  `/dashboard` until it takes over. A CLIP tab appears while stream-clipper
+  runs on the PC (hub proxies its dashboard at `/clipper/`).
+  See [docs/hud.md](docs/hud.md).
 - **`panel/`** — PhoneBox-style grid pages at `/panel` and their browser layout
   editor at `/panel/edit` (a third dashboard, beside `/hud` and `/dashboard`).
   Layout lives in `~/panel.json`, outside the repo; storage and validation are

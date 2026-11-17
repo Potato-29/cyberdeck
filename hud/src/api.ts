@@ -80,3 +80,6 @@ export interface SpotifyNow {
   volume?: number | null
   supports_volume?: boolean
 }
+
+/** /clipper/status — whether stream-clipper's dashboard answers on the PC. */
+export interface ClipperStatus { running: boolean; channels?: number; live?: number; queue?: number }

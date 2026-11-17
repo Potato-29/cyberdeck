@@ -40,9 +40,34 @@ along the top, by flicking left/right, or with the arrow keys.
 | PERIPH | `WX` weather · `FORZA` live telemetry (LAN only — the tunnel is https, so the ws:// socket is blocked) · `NEWS` (tap `[ + ]` to expand) |
 | DECK | `AUDIO` PC mic/speaker mute · `LAUNCH` app grid |
 | MUSIC | Spotify now-playing: prev · album art (tap = play/pause) · next, volume strip below |
+| CLIP | Only while stream-clipper runs on the PC: its own dashboard, framed whole (below) |
 
 Stopping `cloudflared` or `webhook`, and any action with `"confirm": true` in
 `actions.json`, opens an in-page confirm dialog first.
+
+## Clip
+
+The CLIP tab is [stream-clipper](https://github.com/Potato-29/stream-clipper)'s
+own dashboard in an iframe. It isn't a fixed page: the HUD polls
+`/clipper/status` every 10s and adds the tab only while the clipper answers, and
+drops it (falling back to CORE) when it stops. A remembered CLIP tab comes back
+by itself next time.
+
+The clipper runs on the PC, so the hub proxies it — an `http://PC_IP` iframe
+inside the https HUD would be blocked as mixed content, and would skip the token.
+
+| Route | Auth | Does |
+| --- | --- | --- |
+| `GET /clipper/status` | token | `{"running": bool, channels, live, queue}` — 2s probe of the clipper's `/api/state` |
+| `GET /clipper/` | token | the clipper's page (`/clipper` redirects here; the slash matters for relative URLs) |
+| `GET /clipper/api/state`, `/clipper/media/...` | token | passed through; `Range` is forwarded so clips seek |
+
+The clipper page uses relative URLs and re-sends its own `?token=`, so it needs
+no changes to run under `/clipper/`.
+
+Setup: start the clipper on the PC with `--dashboard-host 0.0.0.0` (or
+`dashboard_host: 0.0.0.0` in `channels.yaml`) so the phone can reach it — it
+still refuses non-LAN addresses. Set `CLIPPER_PORT` in `.env` if it isn't 8765.
 
 ## Music
 

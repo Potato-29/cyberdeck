@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, Response, jsonify, redirect, request, send_file, send_from_directory
 
 app = Flask(__name__)
 
@@ -58,6 +58,8 @@ PC_IP = require_env("PC_IP")
 PC_TELEMETRY_PORT = os.environ.get("PC_TELEMETRY_PORT", "8085")
 PC_AGENT_PORT = os.environ.get("PC_AGENT_PORT", "8086")
 PC_AGENT_TOKEN = require_env("PC_AGENT_TOKEN")
+# stream-clipper's dashboard on the PC (run it with --dashboard-host 0.0.0.0)
+CLIPPER_PORT = os.environ.get("CLIPPER_PORT", "8765")
 
 # Weekly standup logger — imported after .env is loaded, since standup.py
 # reads its config at module level. Serves /standup and /standup/*.
@@ -940,6 +942,59 @@ def hud_assets(path):
     return send_from_directory(HUD_DIST / "assets", path, max_age=31536000)
 
 
+
+# ── Stream clipper (PC) ───────────────────────────────────
+# stream-clipper's own dashboard, proxied from the PC so the https HUD can frame
+# it (a plain http://PC_IP iframe is mixed content, and it would skip the token).
+# The clipper page uses relative URLs and re-sends its own ?token=, so it works
+# unchanged under /clipper/. The HUD shows its CLIP tab only while /clipper/status
+# says it's up.
+CLIPPER_BASE = f"http://{PC_IP}:{CLIPPER_PORT}"
+
+
+@app.route("/clipper/status", methods=["GET"])
+def clipper_status():
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        resp = requests.get(f"{CLIPPER_BASE}/api/state", timeout=2)
+        resp.raise_for_status()
+        state = resp.json()
+        chans = state.get("channels", [])
+        return jsonify({
+            "running": True,
+            "channels": len(chans),
+            "live": sum(1 for c in chans if c.get("live")),
+            "queue": state.get("queue", {}).get("waiting", 0),
+        })
+    except Exception:
+        return jsonify({"running": False})
+
+
+@app.route("/clipper", methods=["GET"])
+def clipper_slash():
+    # Trailing slash matters: the page's relative URLs resolve against it.
+    qs = request.query_string.decode()
+    return redirect("/clipper/" + ("?" + qs if qs else ""))
+
+
+@app.route("/clipper/", methods=["GET"])
+@app.route("/clipper/api/state", methods=["GET"])
+@app.route("/clipper/media/<path:path>", methods=["GET"])
+def clipper_proxy(path=None):
+    """Pass GETs through to the clipper. Range is forwarded so <video> can seek."""
+    if not verify_token(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    upstream = request.path[len("/clipper"):]  # "/", "/api/state", "/media/..."
+    headers = {"Range": request.headers["Range"]} if "Range" in request.headers else {}
+    try:
+        resp = requests.get(CLIPPER_BASE + upstream, headers=headers, stream=True, timeout=(3, 30))
+    except requests.RequestException:
+        return jsonify({"error": "clipper not running"}), 502
+    keep = ("Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Cache-Control")
+    out = {k: resp.headers[k] for k in keep if k in resp.headers}
+    return Response(resp.iter_content(1 << 16), status=resp.status_code, headers=out,
+                    direct_passthrough=True)
 
 # ── Panel (panel/) ────────────────────────────────────────
 # PhoneBox-style grid panel at /panel and its control panel at /panel/edit.

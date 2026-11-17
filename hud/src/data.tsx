@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { getJson, type Action, type AudioStatus, type DashboardData, type DeckApps } from './api'
+import { getJson, type Action, type AudioStatus, type ClipperStatus, type DashboardData, type DeckApps } from './api'
 import { usePoll } from './hooks/usePoll'
 
 // Poll cadences match dashboard.html: 4s for the aggregate, 8s for the PC link.
@@ -9,6 +9,8 @@ function useDeckData() {
     apps: usePoll(() => getJson<DeckApps>('/deck/apps'), 8000),
     audio: usePoll(() => getJson<AudioStatus>('/audio/status'), 8000),
     actions: usePoll(() => getJson<Action[]>('/actions/list'), 60000),
+    // Decides whether the CLIP tab exists at all, so it's polled on every page.
+    clipper: usePoll(() => getJson<ClipperStatus>('/clipper/status'), 10000),
   }
 }
 
