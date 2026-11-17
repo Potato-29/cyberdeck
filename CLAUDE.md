@@ -53,6 +53,11 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
   controls Spotify through the hub's `/spotify/*` routes (`spotify_auth.py`
   gets the refresh token once). Runs side by side with
   `/dashboard` until it takes over. See [docs/hud.md](docs/hud.md).
+- **`panel/`** — PhoneBox-style grid pages at `/panel` and their browser layout
+  editor at `/panel/edit` (a third dashboard, beside `/hud` and `/dashboard`).
+  Layout lives in `~/panel.json`, outside the repo; storage and validation are
+  in `panel_store.py`. Shortcuts pick from whitelisted actions, never hold
+  commands. See [docs/panel.md](docs/panel.md).
 - **`forza/`** — standalone aiohttp service (HTTP + WebSocket) for the Forza telemetry HUD.
 - **`ideas/`** — standalone idea board. **The exception to most rules below.**
 - **`work-log-tool/`** — work log capture. **The only Node service in the tree**
@@ -71,7 +76,7 @@ Subdomains: `ssh` → 8022, `ntfy` → 2121, `restart` → 2122, `race` → 8000
 ## Conventions
 
 - **No build step, no package manager.** No `package.json`, no lockfile, no
-  `requirements.txt` anywhere except `ideas/web/` and `hud/` (and
+  `requirements.txt` anywhere except `ideas/web/`, `hud/` and `panel/` (and
   `work-log-tool/`). Python deps (`flask`,
   `requests`, `aiohttp`, `pycaw`) are installed ad-hoc with `pip install`.
 - **Config lives in JSON, read fresh per call** — `services.json`, `actions.json`,

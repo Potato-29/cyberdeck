@@ -1,0 +1,52 @@
+[
+  {"type": "clock", "category": "Time", "name": "Clock", "icon": "🕒", "desc": "Big clock and date, with the current weather.", "w": 6, "h": 3, "minW": 2, "minH": 1, "options": [
+    {"key": "date", "label": "Date", "type": "bool", "default": true},
+    {"key": "weather", "label": "Current weather", "type": "bool", "default": true},
+    {"key": "seconds", "label": "Seconds", "type": "bool", "default": false}]},
+  {"type": "analog", "category": "Time", "name": "Analog clock", "icon": "🕰️", "desc": "A classic clock face.", "w": 3, "h": 3, "minW": 2, "minH": 2, "options": [
+    {"key": "seconds", "label": "Second hand", "type": "bool", "default": true},
+    {"key": "label", "label": "Label", "type": "text", "default": ""}]},
+  {"type": "title", "category": "Time", "name": "Title", "icon": "🔤", "desc": "A heading with an optional line under it.", "w": 4, "h": 1, "minW": 1, "minH": 1, "options": [
+    {"key": "text", "label": "Text", "type": "text", "default": "Cyberdeck"},
+    {"key": "sub", "label": "Second line", "type": "text", "default": ""}]},
+
+  {"type": "gauge", "category": "Computer", "name": "Gauge", "icon": "⏱️", "desc": "A ring gauge for one reading.", "w": 3, "h": 3, "minW": 2, "minH": 2, "options": [
+    {"key": "metric", "label": "Reading", "type": "metric", "default": "pc.cpu"}]},
+  {"type": "stat", "category": "Computer", "name": "Metric tile", "icon": "🔢", "desc": "One reading as a big number, with a sparkline.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": [
+    {"key": "metric", "label": "Reading", "type": "metric", "default": "pc.cpu"},
+    {"key": "spark", "label": "Sparkline", "type": "bool", "default": true}]},
+  {"type": "chart", "category": "Computer", "name": "Chart", "icon": "📈", "desc": "The last few minutes of up to three readings.", "w": 6, "h": 3, "minW": 3, "minH": 2, "options": [
+    {"key": "metric", "label": "Reading", "type": "metric", "default": "pc.cpu"},
+    {"key": "metric2", "label": "Second reading", "type": "metric", "default": "pc.gpu", "empty": true},
+    {"key": "metric3", "label": "Third reading", "type": "metric", "default": "", "empty": true}]},
+
+  {"type": "services", "category": "Deck", "name": "Services", "icon": "🧩", "desc": "Every service in services.json; tap to start or stop.", "w": 4, "h": 4, "minW": 3, "minH": 2, "options": [
+    {"key": "controls", "label": "Start / stop buttons", "type": "bool", "default": true}]},
+  {"type": "battery", "category": "Deck", "name": "Phone battery", "icon": "🔋", "desc": "The deck's battery level, charging state and temperature.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+  {"type": "wifi", "category": "Deck", "name": "Wi-Fi", "icon": "📶", "desc": "Network name, signal and link speed.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+  {"type": "system", "category": "Deck", "name": "System", "icon": "🖥️", "desc": "Deck uptime, storage and memory.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+
+  {"type": "media", "category": "Media", "name": "Now playing", "icon": "🎵", "desc": "Spotify track, cover art, controls and volume.", "w": 6, "h": 3, "minW": 3, "minH": 2, "options": [
+    {"key": "volume", "label": "Volume slider", "type": "bool", "default": true}]},
+  {"type": "audio", "category": "Media", "name": "PC audio", "icon": "🎙️", "desc": "Mute the PC's microphone or speakers.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+
+  {"type": "keys", "category": "Controls", "name": "Shortcut grid", "icon": "🎛️", "desc": "Stream Deck-style keys from the Shortcuts tab.", "w": 6, "h": 3, "minW": 1, "minH": 1, "options": [
+    {"key": "keys", "label": "Keys (none ticked = all)", "type": "shortcuts", "default": []},
+    {"key": "columns", "label": "Columns", "type": "number", "default": 3, "min": 1, "max": 8}]},
+  {"type": "button", "category": "Controls", "name": "Big button", "icon": "🔘", "desc": "One shortcut as a single large key.", "w": 3, "h": 2, "minW": 1, "minH": 1, "options": [
+    {"key": "key", "label": "Shortcut", "type": "shortcut", "default": ""}]},
+  {"type": "launcher", "category": "Controls", "name": "PC apps", "icon": "🚀", "desc": "Apps from deck-apps.json; tap to launch, running ones are lit.", "w": 6, "h": 3, "minW": 2, "minH": 1, "options": [
+    {"key": "columns", "label": "Columns", "type": "number", "default": 4, "min": 1, "max": 8}]},
+  {"type": "feeder", "category": "Controls", "name": "Cat feeder", "icon": "🐱", "desc": "Feed the cat; shows the ESP32's last feed.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+
+  {"type": "weather", "category": "Web & data", "name": "Weather", "icon": "⛅", "desc": "Temperature, feels-like and humidity.", "w": 3, "h": 2, "minW": 2, "minH": 1, "options": []},
+  {"type": "news", "category": "Web & data", "name": "News", "icon": "📰", "desc": "Headlines from the hub's RSS feed.", "w": 6, "h": 3, "minW": 3, "minH": 2, "options": [
+    {"key": "count", "label": "Headlines", "type": "number", "default": 5, "min": 1, "max": 12}]},
+  {"type": "forza", "category": "Web & data", "name": "Forza", "icon": "🏎️", "desc": "Live Forza telemetry. LAN only: the tunnel blocks ws://.", "w": 6, "h": 3, "minW": 3, "minH": 2, "options": []},
+  {"type": "pushed", "category": "Web & data", "name": "Pushed value", "icon": "📌", "desc": "A value sent by a webhook to /panel/push/<key>.", "w": 3, "h": 2, "minW": 1, "minH": 1, "options": [
+    {"key": "key", "label": "Key", "type": "pushkey", "default": "status"},
+    {"key": "label", "label": "Label (empty = the pushed title)", "type": "text", "default": ""},
+    {"key": "style", "label": "Style", "type": "select", "default": "value", "choices": [["value", "Value"], ["gauge", "Ring"], ["list", "List"]]}]},
+  {"type": "notifications", "category": "Web & data", "name": "Notifications", "icon": "🔔", "desc": "The latest notifications sent to /panel/notify.", "w": 4, "h": 3, "minW": 2, "minH": 2, "options": [
+    {"key": "count", "label": "How many", "type": "number", "default": 6, "min": 1, "max": 20}]}
+]
