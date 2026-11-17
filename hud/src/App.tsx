@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useRef, useState, type ComponentType, type TouchEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type TouchEvent } from 'react'
 import { isUp } from './api'
 import { useData } from './data'
 import { useNotchInset } from './notch'
 import { IcExpand, IcMoon, IcShrink, IcSun } from './ui/icons'
 import { Led } from './ui/Panel'
+import { ClipPage } from './widgets/Clip'
 import { CorePage } from './widgets/Core'
 import { DeckPage } from './widgets/Deck'
 import { MusicPage } from './widgets/Music'
 import { PeriphPage } from './widgets/Periph'
 import { VitalsPage } from './widgets/Vitals'
 
+type PageDef = { key: string; label: string; Page: ComponentType }
+
 // The four groupings of the original deck selector, plus MUSIC.
-const PAGES: { key: string; label: string; Page: ComponentType }[] = [
+const PAGES: PageDef[] = [
   { key: 'core', label: 'CORE', Page: CorePage },
   { key: 'vitals', label: 'VITALS', Page: VitalsPage },
   { key: 'periph', label: 'PERIPH', Page: PeriphPage },
@@ -19,22 +22,35 @@ const PAGES: { key: string; label: string; Page: ComponentType }[] = [
   { key: 'music', label: 'MUSIC', Page: MusicPage },
 ]
 
-function initialPage() {
-  try {
-    const i = PAGES.findIndex((p) => p.key === localStorage.getItem('hud-page'))
-    return i < 0 ? 0 : i
-  } catch { return 0 }
+// Only while stream-clipper is running on the PC (polled via /clipper/status).
+const CLIP: PageDef = { key: 'clip', label: 'CLIP', Page: ClipPage }
+
+function initialKey() {
+  try { return localStorage.getItem('hud-page') ?? PAGES[0].key } catch { return PAGES[0].key }
 }
 
 export default function App() {
-  const [page, setPage] = useState(initialPage)
+  const { clipper } = useData()
+  const clipOn = !!clipper.data?.running
+  const pages = useMemo(() => (clipOn ? [...PAGES, CLIP] : PAGES), [clipOn])
+
+  // Tracked by key, not index, because CLIP comes and goes. A remembered key
+  // that isn't shown right now (CLIP while the clipper is off) falls back to
+  // the first page without forgetting it, so it comes back when CLIP does.
+  const [key, setKey] = useState(initialKey)
+  const found = pages.findIndex((p) => p.key === key)
+  const page = found < 0 ? 0 : found
+  const setPage = useCallback((i: number) => setKey(pages[i].key), [pages])
   useNotchInset()
 
-  const step = useCallback((d: number) => setPage((c) => (c + d + PAGES.length) % PAGES.length), [])
+  const step = useCallback(
+    (d: number) => setKey(pages[(page + d + pages.length) % pages.length].key),
+    [pages, page],
+  )
 
   useEffect(() => {
-    try { localStorage.setItem('hud-page', PAGES[page].key) } catch { /* private mode */ }
-  }, [page])
+    try { localStorage.setItem('hud-page', key) } catch { /* private mode */ }
+  }, [key])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -62,12 +78,12 @@ export default function App() {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1)
   }
 
-  const { Page } = PAGES[page]
+  const { Page } = pages[page]
   return (
     <div className="shell">
-      <TopBar page={page} onPick={setPage} />
+      <TopBar pages={pages} page={page} onPick={setPage} />
       <main className="stage" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div className="page" key={PAGES[page].key}>
+        <div className="page" key={pages[page].key}>
           <Page />
         </div>
       </main>
@@ -75,14 +91,14 @@ export default function App() {
   )
 }
 
-function TopBar({ page, onPick }: { page: number; onPick: (i: number) => void }) {
+function TopBar({ pages, page, onPick }: { pages: PageDef[]; page: number; onPick: (i: number) => void }) {
   const { dash } = useData()
   const svcs = Object.values(dash.data?.services ?? {})
   const healthy = !dash.error && svcs.every(isUp)
 
   return (
     <nav className="topbar">
-      {PAGES.map((p, i) => (
+      {pages.map((p, i) => (
         <button key={p.key} className="tab" aria-current={i === page ? 'page' : undefined} onClick={() => onPick(i)}>
           {p.label}
         </button>

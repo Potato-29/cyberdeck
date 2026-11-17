@@ -430,3 +430,13 @@ p { margin: 0; }
   .page, .pop, .flash, .led.bad, .colon { animation: none; }
   .meter i { transition: none; }
 }
+
+/* ── CLIP: stream-clipper's dashboard, framed ── */
+.clip {
+  grid-area: 1 / 1 / 3 / 5;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+.clip iframe { display: block; width: 100%; height: 100%; border: 0; }
