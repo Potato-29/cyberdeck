@@ -188,7 +188,13 @@
      "w": 7,
      "h": 2,
      "options": {
-      "columns": 4
+      "columns": 4,
+      "keys": [
+       "feed",
+       "health",
+       "tunnel",
+       "gomusic"
+      ]
      }
     }
    ]

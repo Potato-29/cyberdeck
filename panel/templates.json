@@ -1,50 +1,430 @@
 [
-  {"id": "home", "title": "Home", "icon": "🏠", "desc": "Clock, weather, now playing and four PC tiles.", "widgets": [
-    {"type": "clock", "x": 0, "y": 0, "w": 6, "h": 4, "options": {"weather": true}},
-    {"type": "media", "x": 6, "y": 0, "w": 6, "h": 4},
-    {"type": "stat", "x": 0, "y": 4, "w": 3, "h": 2, "options": {"metric": "pc.cpu"}},
-    {"type": "stat", "x": 3, "y": 4, "w": 3, "h": 2, "options": {"metric": "pc.gpu"}},
-    {"type": "stat", "x": 6, "y": 4, "w": 3, "h": 2, "options": {"metric": "pc.ram"}},
-    {"type": "stat", "x": 9, "y": 4, "w": 3, "h": 2, "options": {"metric": "deck.battery"}}]},
-  {"id": "dashboard", "title": "Dashboard", "icon": "🧭", "desc": "Clock, four gauges, now playing and a shortcut grid.", "widgets": [
-    {"type": "clock", "x": 0, "y": 0, "w": 4, "h": 3},
-    {"type": "gauge", "x": 4, "y": 0, "w": 2, "h": 3, "options": {"metric": "pc.cpu"}},
-    {"type": "gauge", "x": 6, "y": 0, "w": 2, "h": 3, "options": {"metric": "pc.gpu"}},
-    {"type": "gauge", "x": 8, "y": 0, "w": 2, "h": 3, "options": {"metric": "pc.ram"}},
-    {"type": "gauge", "x": 10, "y": 0, "w": 2, "h": 3, "options": {"metric": "pc.gpu_temp"}},
-    {"type": "media", "x": 0, "y": 3, "w": 6, "h": 3},
-    {"type": "keys", "x": 6, "y": 3, "w": 6, "h": 3, "options": {"columns": 3}}]},
-  {"id": "system", "title": "System", "icon": "📊", "desc": "PC and deck charts with gauges.", "widgets": [
-    {"type": "chart", "x": 0, "y": 0, "w": 6, "h": 3, "options": {"metric": "pc.cpu", "metric2": "pc.gpu"}},
-    {"type": "chart", "x": 6, "y": 0, "w": 6, "h": 3, "options": {"metric": "pc.cpu_temp", "metric2": "pc.gpu_temp"}},
-    {"type": "gauge", "x": 0, "y": 3, "w": 3, "h": 3, "options": {"metric": "pc.ram"}},
-    {"type": "gauge", "x": 3, "y": 3, "w": 3, "h": 3, "options": {"metric": "deck.cpu"}},
-    {"type": "gauge", "x": 6, "y": 3, "w": 3, "h": 3, "options": {"metric": "deck.ram"}},
-    {"type": "gauge", "x": 9, "y": 3, "w": 3, "h": 3, "options": {"metric": "deck.disk"}}]},
-  {"id": "deck", "title": "Deck", "icon": "🛰️", "desc": "Services, battery, network and the cat feeder — the HUD's CORE page.", "widgets": [
-    {"type": "services", "x": 0, "y": 0, "w": 5, "h": 6},
-    {"type": "battery", "x": 5, "y": 0, "w": 4, "h": 2},
-    {"type": "wifi", "x": 9, "y": 0, "w": 3, "h": 2},
-    {"type": "system", "x": 5, "y": 2, "w": 4, "h": 2},
-    {"type": "feeder", "x": 9, "y": 2, "w": 3, "h": 2},
-    {"type": "keys", "x": 5, "y": 4, "w": 7, "h": 2, "options": {"columns": 4}}]},
-  {"id": "music", "title": "Music", "icon": "🎵", "desc": "A big now-playing card with PC audio and a clock.", "widgets": [
-    {"type": "media", "x": 0, "y": 0, "w": 8, "h": 6},
-    {"type": "clock", "x": 8, "y": 0, "w": 4, "h": 3, "options": {"weather": false}},
-    {"type": "audio", "x": 8, "y": 3, "w": 4, "h": 3}]},
-  {"id": "shortcuts", "title": "Shortcuts", "icon": "🎛️", "desc": "A full page of Stream Deck-style keys.", "widgets": [
-    {"type": "keys", "x": 0, "y": 0, "w": 12, "h": 6, "options": {"columns": 4}}]},
-  {"id": "apps", "title": "PC apps", "icon": "🚀", "desc": "Launch apps on the PC, with audio mutes.", "widgets": [
-    {"type": "launcher", "x": 0, "y": 0, "w": 12, "h": 4, "options": {"columns": 5}},
-    {"type": "audio", "x": 0, "y": 4, "w": 4, "h": 2},
-    {"type": "gauge", "x": 4, "y": 4, "w": 2, "h": 2, "options": {"metric": "pc.cpu"}},
-    {"type": "gauge", "x": 6, "y": 4, "w": 2, "h": 2, "options": {"metric": "pc.gpu"}},
-    {"type": "media", "x": 8, "y": 4, "w": 4, "h": 2, "options": {"volume": false}}]},
-  {"id": "feeds", "title": "Feeds", "icon": "📡", "desc": "Values and notifications pushed by webhooks, plus news.", "widgets": [
-    {"type": "pushed", "x": 0, "y": 0, "w": 3, "h": 2, "options": {"key": "status"}},
-    {"type": "pushed", "x": 3, "y": 0, "w": 3, "h": 2, "options": {"key": "build", "style": "gauge"}},
-    {"type": "weather", "x": 6, "y": 0, "w": 3, "h": 2},
-    {"type": "battery", "x": 9, "y": 0, "w": 3, "h": 2},
-    {"type": "notifications", "x": 0, "y": 2, "w": 6, "h": 4},
-    {"type": "news", "x": 6, "y": 2, "w": 6, "h": 4}]}
+ {
+  "id": "home",
+  "title": "Home",
+  "icon": "🏠",
+  "desc": "Clock, weather, now playing and four PC tiles.",
+  "widgets": [
+   {
+    "type": "clock",
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 4,
+    "options": {
+     "weather": true
+    }
+   },
+   {
+    "type": "media",
+    "x": 6,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   {
+    "type": "stat",
+    "x": 0,
+    "y": 4,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "metric": "pc.cpu"
+    }
+   },
+   {
+    "type": "stat",
+    "x": 3,
+    "y": 4,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "metric": "pc.gpu"
+    }
+   },
+   {
+    "type": "stat",
+    "x": 6,
+    "y": 4,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "metric": "pc.ram"
+    }
+   },
+   {
+    "type": "stat",
+    "x": 9,
+    "y": 4,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "metric": "deck.battery"
+    }
+   }
+  ]
+ },
+ {
+  "id": "dashboard",
+  "title": "Dashboard",
+  "icon": "🧭",
+  "desc": "Clock, four gauges, now playing and a shortcut grid.",
+  "widgets": [
+   {
+    "type": "clock",
+    "x": 0,
+    "y": 0,
+    "w": 4,
+    "h": 3
+   },
+   {
+    "type": "gauge",
+    "x": 4,
+    "y": 0,
+    "w": 2,
+    "h": 3,
+    "options": {
+     "metric": "pc.cpu"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 6,
+    "y": 0,
+    "w": 2,
+    "h": 3,
+    "options": {
+     "metric": "pc.gpu"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 8,
+    "y": 0,
+    "w": 2,
+    "h": 3,
+    "options": {
+     "metric": "pc.ram"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 10,
+    "y": 0,
+    "w": 2,
+    "h": 3,
+    "options": {
+     "metric": "pc.gpu_temp"
+    }
+   },
+   {
+    "type": "media",
+    "x": 0,
+    "y": 3,
+    "w": 6,
+    "h": 3
+   },
+   {
+    "type": "keys",
+    "x": 6,
+    "y": 3,
+    "w": 6,
+    "h": 3,
+    "options": {
+     "columns": 3
+    }
+   }
+  ]
+ },
+ {
+  "id": "system",
+  "title": "System",
+  "icon": "📊",
+  "desc": "PC and deck charts with gauges.",
+  "widgets": [
+   {
+    "type": "chart",
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 3,
+    "options": {
+     "metric": "pc.cpu",
+     "metric2": "pc.gpu"
+    }
+   },
+   {
+    "type": "chart",
+    "x": 6,
+    "y": 0,
+    "w": 6,
+    "h": 3,
+    "options": {
+     "metric": "pc.cpu_temp",
+     "metric2": "pc.gpu_temp"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 0,
+    "y": 3,
+    "w": 3,
+    "h": 3,
+    "options": {
+     "metric": "pc.ram"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 3,
+    "y": 3,
+    "w": 3,
+    "h": 3,
+    "options": {
+     "metric": "deck.cpu"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 6,
+    "y": 3,
+    "w": 3,
+    "h": 3,
+    "options": {
+     "metric": "deck.ram"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 9,
+    "y": 3,
+    "w": 3,
+    "h": 3,
+    "options": {
+     "metric": "deck.disk"
+    }
+   }
+  ]
+ },
+ {
+  "id": "deck",
+  "title": "Deck",
+  "icon": "🛰️",
+  "desc": "Services, battery, network and the cat feeder — the HUD's CORE page.",
+  "widgets": [
+   {
+    "type": "services",
+    "x": 0,
+    "y": 0,
+    "w": 5,
+    "h": 6
+   },
+   {
+    "type": "battery",
+    "x": 5,
+    "y": 0,
+    "w": 4,
+    "h": 2
+   },
+   {
+    "type": "wifi",
+    "x": 9,
+    "y": 0,
+    "w": 3,
+    "h": 2
+   },
+   {
+    "type": "system",
+    "x": 5,
+    "y": 2,
+    "w": 4,
+    "h": 2
+   },
+   {
+    "type": "feeder",
+    "x": 9,
+    "y": 2,
+    "w": 3,
+    "h": 2
+   },
+   {
+    "type": "keys",
+    "x": 5,
+    "y": 4,
+    "w": 7,
+    "h": 2,
+    "options": {
+     "columns": 4,
+     "keys": [
+      "feed",
+      "health",
+      "tunnel",
+      "gomusic"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "music",
+  "title": "Music",
+  "icon": "🎵",
+  "desc": "A big now-playing card with PC audio and a clock.",
+  "widgets": [
+   {
+    "type": "media",
+    "x": 0,
+    "y": 0,
+    "w": 8,
+    "h": 6
+   },
+   {
+    "type": "clock",
+    "x": 8,
+    "y": 0,
+    "w": 4,
+    "h": 3,
+    "options": {
+     "weather": false
+    }
+   },
+   {
+    "type": "audio",
+    "x": 8,
+    "y": 3,
+    "w": 4,
+    "h": 3
+   }
+  ]
+ },
+ {
+  "id": "shortcuts",
+  "title": "Shortcuts",
+  "icon": "🎛️",
+  "desc": "A full page of Stream Deck-style keys.",
+  "widgets": [
+   {
+    "type": "keys",
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 6,
+    "options": {
+     "columns": 4
+    }
+   }
+  ]
+ },
+ {
+  "id": "apps",
+  "title": "PC apps",
+  "icon": "🚀",
+  "desc": "Launch apps on the PC, with audio mutes.",
+  "widgets": [
+   {
+    "type": "launcher",
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 4,
+    "options": {
+     "columns": 5
+    }
+   },
+   {
+    "type": "audio",
+    "x": 0,
+    "y": 4,
+    "w": 4,
+    "h": 2
+   },
+   {
+    "type": "gauge",
+    "x": 4,
+    "y": 4,
+    "w": 2,
+    "h": 2,
+    "options": {
+     "metric": "pc.cpu"
+    }
+   },
+   {
+    "type": "gauge",
+    "x": 6,
+    "y": 4,
+    "w": 2,
+    "h": 2,
+    "options": {
+     "metric": "pc.gpu"
+    }
+   },
+   {
+    "type": "media",
+    "x": 8,
+    "y": 4,
+    "w": 4,
+    "h": 2,
+    "options": {
+     "volume": false
+    }
+   }
+  ]
+ },
+ {
+  "id": "feeds",
+  "title": "Feeds",
+  "icon": "📡",
+  "desc": "Values and notifications pushed by webhooks, plus news.",
+  "widgets": [
+   {
+    "type": "pushed",
+    "x": 0,
+    "y": 0,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "key": "status"
+    }
+   },
+   {
+    "type": "pushed",
+    "x": 3,
+    "y": 0,
+    "w": 3,
+    "h": 2,
+    "options": {
+     "key": "build",
+     "style": "gauge"
+    }
+   },
+   {
+    "type": "weather",
+    "x": 6,
+    "y": 0,
+    "w": 3,
+    "h": 2
+   },
+   {
+    "type": "battery",
+    "x": 9,
+    "y": 0,
+    "w": 3,
+    "h": 2
+   },
+   {
+    "type": "notifications",
+    "x": 0,
+    "y": 2,
+    "w": 6,
+    "h": 4
+   },
+   {
+    "type": "news",
+    "x": 6,
+    "y": 2,
+    "w": 6,
+    "h": 4
+   }
+  ]
+ }
 ]
