@@ -348,50 +348,51 @@ def get_weather():
 # ── Routes ────────────────────────────────────────────────
 
 
+# The control helpers below return (body, http_status). The routes wrap them
+# in jsonify, and /panel/key calls them directly for its shortcuts.
+def do_service(op: str, service: str | None) -> tuple[dict, int]:
+    """op = restart | stop."""
+    registry = load_registry()
+    svc = find_service(service, registry) if service else None
+    if svc is None:
+        return {"error": f"Unknown service. Valid: {[s.key for s in registry]}"}, 400
+
+    if op == "restart":
+        ok, message = restart_service(svc)
+        if ok:
+            return {"status": message}, 200
+        return {"error": message}, 400 if svc.start is None else 500
+
+    if svc.key == "webhook":
+        # Stopping our own tmux session kills this process before the
+        # response can be sent — defer it so the client gets its answer.
+        if svc.stop is None:
+            return {"error": f"{svc.key} cannot be stopped remotely"}, 400
+        subprocess.Popen(
+            ["sh", "-c", f"sleep 1; {svc.stop}"], start_new_session=True
+        )
+        return {"status": "webhook stop triggered — this session will end in ~1s"}, 200
+
+    ok, message = stop_service(svc)
+    if ok:
+        return {"status": message}, 200
+    return {"error": message}, 400 if svc.stop is None else 500
+
+
 @app.route("/restart", methods=["GET", "POST"])
 def restart():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
-
-    service = request.args.get("service")
-    registry = load_registry()
-    svc = find_service(service, registry) if service else None
-    if svc is None:
-        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
-
-    ok, message = restart_service(svc)
-    if ok:
-        return jsonify({"status": message}), 200
-    status_code = 400 if svc.start is None else 500
-    return jsonify({"error": message}), status_code
+    body, code = do_service("restart", request.args.get("service"))
+    return jsonify(body), code
 
 
 @app.route("/stop", methods=["GET", "POST"])
 def stop():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
-
-    service = request.args.get("service")
-    registry = load_registry()
-    svc = find_service(service, registry) if service else None
-    if svc is None:
-        return jsonify({"error": f"Unknown service. Valid: {[s.key for s in registry]}"}), 400
-
-    if svc.key == "webhook":
-        # Stopping our own tmux session kills this process before the
-        # response can be sent — defer it so the client gets its answer.
-        if svc.stop is None:
-            return jsonify({"error": f"{svc.key} cannot be stopped remotely"}), 400
-        subprocess.Popen(
-            ["sh", "-c", f"sleep 1; {svc.stop}"], start_new_session=True
-        )
-        return jsonify({"status": "webhook stop triggered — this session will end in ~1s"}), 200
-
-    ok, message = stop_service(svc)
-    if ok:
-        return jsonify({"status": message}), 200
-    status_code = 400 if svc.stop is None else 500
-    return jsonify({"error": message}), status_code
+    body, code = do_service("stop", request.args.get("service"))
+    return jsonify(body), code
 
 
 @app.route("/status", methods=["GET"])
@@ -440,11 +441,15 @@ def actions_list():
 def action_run():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
+    body, code = do_action(request.args.get("action"))
+    return jsonify(body), code
 
-    key = request.args.get("action")
+
+def do_action(key: str | None) -> tuple[dict, int]:
+    """Run one whitelisted actions.json entry by key."""
     action = find_action(key) if key else None
     if action is None:
-        return jsonify({"error": f"Unknown action. Valid: {[a['key'] for a in load_actions()]}"}), 400
+        return {"error": f"Unknown action. Valid: {[a['key'] for a in load_actions()]}"}, 400
 
     command = action["command"]
     if key == "full_restart":
@@ -454,17 +459,17 @@ def action_run():
         # the process that received the request is gone, so this is
         # necessarily an optimistic "triggered" response, not a real result.
         subprocess.Popen(["sh", "-c", command], start_new_session=True)
-        return jsonify({"status": f"{key} triggered"}), 200
+        return {"status": f"{key} triggered"}, 200
 
     try:
         result = subprocess.run(
             command, shell=True, capture_output=True, text=True, timeout=60
         )
         if result.returncode == 0:
-            return jsonify({"status": f"{key} completed", "output": result.stdout[-2000:]}), 200
-        return jsonify({"error": result.stderr[-2000:] or f"{key} failed"}), 500
+            return {"status": f"{key} completed", "output": result.stdout[-2000:]}, 200
+        return {"error": result.stderr[-2000:] or f"{key} failed"}, 500
     except subprocess.TimeoutExpired:
-        return jsonify({"error": f"{key} timed out"}), 504
+        return {"error": f"{key} timed out"}, 504
 
 @app.route("/feeder-status", methods=["GET"])
 def feeder_status():
@@ -497,7 +502,11 @@ def feeder_status():
 def feed():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
+    body, code = do_feed()
+    return jsonify(body), code
 
+
+def do_feed() -> tuple[dict, int]:
     try:
         resp = call_esp32("feed")
 
@@ -509,26 +518,22 @@ def feed():
         except Exception:
             status_data = {}
 
-        return jsonify(
-            {
-                "status": "success",
-                "esp32": resp.text,
-                "feed_count": status_data.get("feedCount"),
-                "last_feed": status_data.get("lastFeedTime"),
-            }
-        ), 200
+        return {
+            "status": "success",
+            "esp32": resp.text,
+            "feed_count": status_data.get("feedCount"),
+            "last_feed": status_data.get("lastFeedTime"),
+        }, 200
 
     except requests.exceptions.RequestException as e:
         send_ntfy(
             f"Cat feeder ESP32 unreachable! Could not feed. Error: {str(e)}",
             title="🐱 Feed Failed",
         )
-        return jsonify(
-            {
-                "status": "error",
-                "message": f"Could not reach ESP32: {str(e)}",
-            }
-        ), 500
+        return {
+            "status": "error",
+            "message": f"Could not reach ESP32: {str(e)}",
+        }, 500
 
 @app.route("/door-open", methods=["GET"])
 def doorOpen():
@@ -673,17 +678,20 @@ def deck_launch():
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
 
-    target = request.args.get("app")
-    if not target:
-        return jsonify({"error": "Missing 'app' parameter"}), 400
+    body, code = do_pc_launch(request.args.get("app"))
+    return jsonify(body), code
 
+
+def do_pc_launch(target: str | None) -> tuple[dict, int]:
+    if not target:
+        return {"error": "Missing 'app' parameter"}, 400
     try:
         resp = call_pc_agent("launch", {"app": target}, timeout=20)
-        return jsonify(resp.json()), resp.status_code
+        return resp.json(), resp.status_code
     except requests.exceptions.RequestException as e:
-        return jsonify(
-            {"status": "error", "message": f"PC agent unreachable: {e}"}
-        ), 503
+        return {"status": "error", "message": f"PC agent unreachable: {e}"}, 503
+    except ValueError:
+        return {"status": "error", "message": "PC agent sent a non-JSON reply"}, 502
 
 
 @app.route("/deck/close", methods=["GET", "POST"])
@@ -879,25 +887,34 @@ def spotify_control():
     """op = play | pause | next | previous, or op=volume&level=0..100."""
     if not verify_token(request):
         return jsonify({"error": "Unauthorized"}), 401
+    body, code = do_spotify(request.args.get("op", ""), request.args.get("level", ""))
+    return jsonify(body), code
+
+
+def do_spotify(op: str, level: str = "") -> tuple[dict, int]:
+    """op = play | pause | toggle | next | previous | volume (with level)."""
     if not spotify_configured():
-        return jsonify({"status": "error", "message": "Spotify not configured"}), 503
-    op = request.args.get("op", "")
+        return {"status": "error", "message": "Spotify not configured"}, 503
     try:
         if op == "volume":
-            level = max(0, min(100, int(request.args.get("level", ""))))
-            resp = spotify_call("PUT", "/volume", volume_percent=level)
-        elif op in SPOTIFY_OPS:
+            vol = max(0, min(100, int(level)))
+            resp = spotify_call("PUT", "/volume", volume_percent=vol)
+        elif op == "toggle" or op in SPOTIFY_OPS:
+            if op == "toggle":
+                cur = spotify_call("GET")
+                playing = cur.status_code == 200 and cur.json().get("is_playing")
+                op = "pause" if playing else "play"
             method, path = SPOTIFY_OPS[op]
             resp = spotify_call(method, path)
         else:
-            return jsonify({"status": "error", "message": f"Unknown op: {op}"}), 400
+            return {"status": "error", "message": f"Unknown op: {op}"}, 400
     except ValueError:
-        return jsonify({"status": "error", "message": "level must be 0-100"}), 400
+        return {"status": "error", "message": "level must be 0-100"}, 400
     except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 502
+        return {"status": "error", "message": str(exc)}, 502
     if resp.status_code >= 400:
-        return jsonify({"status": "error", "message": spotify_error(resp)}), 502
-    return jsonify({"status": "ok"}), 200
+        return {"status": "error", "message": spotify_error(resp)}, 502
+    return {"status": "ok"}, 200
 
 
 # React HUD (hud/) — built bundle is committed in hud/dist, so the phone needs
@@ -922,6 +939,180 @@ def hud_assets(path):
     send_from_directory refuses paths that escape the folder."""
     return send_from_directory(HUD_DIST / "assets", path, max_age=31536000)
 
+
+
+# ── Panel (panel/) ────────────────────────────────────────
+# PhoneBox-style grid panel at /panel and its control panel at /panel/edit.
+# Layout, pushed values and the event ring live in panel_store.py; the built
+# bundle is committed in panel/dist like hud/dist. See docs/panel.md.
+import panel_store  # noqa: E402
+
+PANEL_DIST = Path(__file__).resolve().parent / "panel" / "dist"
+
+
+def _unauthorized():
+    return jsonify({"error": "Unauthorized"}), 401
+
+
+def _body():
+    """JSON body if it parses, else None (the raw text is read separately)."""
+    return request.get_json(silent=True, force=True)
+
+
+@app.route("/panel", methods=["GET"])
+@app.route("/panel/", methods=["GET"])
+@app.route("/panel/edit", methods=["GET"])
+def panel_page():
+    """One bundle for both: the app picks panel or editor from the path."""
+    if not verify_token(request):
+        return _unauthorized()
+    if not (PANEL_DIST / "index.html").is_file():
+        return jsonify({"error": "panel not built — cd panel && npm run build"}), 503
+    return send_from_directory(PANEL_DIST, "index.html")
+
+
+@app.route("/panel/assets/<path:path>", methods=["GET"])
+def panel_assets(path):
+    """Hashed JS/CSS — no token, same reasoning as /hud/assets."""
+    return send_from_directory(PANEL_DIST / "assets", path, max_age=31536000)
+
+
+@app.route("/panel/config", methods=["GET", "PUT"])
+def panel_config():
+    if not verify_token(request):
+        return _unauthorized()
+    if request.method == "GET":
+        try:
+            return jsonify(panel_store.load_config()), 200
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 500
+    cfg = _body()
+    if not isinstance(cfg, dict):
+        return jsonify({"error": "body must be the config as JSON"}), 400
+    try:
+        saved = panel_store.save_config(cfg, cfg.get("rev"))
+    except panel_store.StaleRevision as e:
+        return jsonify({"error": str(e), "rev": e.current}), 409
+    except panel_store.ConfigError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify(saved), 200
+
+
+@app.route("/panel/catalog", methods=["GET"])
+def panel_catalog():
+    if not verify_token(request):
+        return _unauthorized()
+    return jsonify({
+        "widgets": panel_store.load_widgets(),
+        "templates": panel_store.load_templates(),
+        "kinds": sorted(panel_store.SHORTCUT_KINDS),
+    }), 200
+
+
+@app.route("/panel/push", methods=["GET"])
+def panel_push_list():
+    if not verify_token(request):
+        return _unauthorized()
+    return jsonify(panel_store.load_pushes()), 200
+
+
+@app.route("/panel/push/<key>", methods=["POST", "PUT", "DELETE"])
+def panel_push(key):
+    """curl -X POST .../panel/push/temp -d 21.5   (or JSON, ?ttl=seconds)"""
+    if not verify_token(request):
+        return _unauthorized()
+    if request.method == "DELETE":
+        found = panel_store.delete_push(key)
+        return jsonify({"status": "deleted" if found else "not found"}), 200 if found else 404
+    try:
+        entry = panel_store.normalize_push(
+            _body(), request.get_data(as_text=True), request.args.get("ttl")
+        )
+        panel_store.set_push(key, entry)
+    except panel_store.ConfigError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"status": "ok", "key": key}), 200
+
+
+@app.route("/panel/notify", methods=["POST"])
+def panel_notify():
+    """{title, text, level: ok|warn|error|info, seconds, page} — or plain text."""
+    if not verify_token(request):
+        return _unauthorized()
+    try:
+        note = panel_store.normalize_notify(_body(), request.get_data(as_text=True))
+    except panel_store.ConfigError as e:
+        return jsonify({"error": str(e)}), 400
+    ev = panel_store.add_event("notify", **note)
+    return jsonify({"status": "ok", "seq": ev["seq"]}), 200
+
+
+def _goto(ref: str, countdown) -> tuple[dict, int]:
+    page = panel_store.find_page(panel_store.load_config(), ref)
+    if page is None:
+        return {"error": f"no page {ref!r}"}, 404
+    try:
+        secs = max(0, min(30, int(countdown))) if countdown not in (None, "") else 3
+    except ValueError:
+        return {"error": "countdown must be whole seconds"}, 400
+    ev = panel_store.add_event("goto", page=page["id"], countdown=secs)
+    return {"status": "ok", "page": page["id"], "seq": ev["seq"]}, 200
+
+
+@app.route("/panel/goto/<ref>", methods=["POST"])
+def panel_goto(ref):
+    """Switch the panel to a page (id or 1-based number). ?countdown=0 skips the countdown."""
+    if not verify_token(request):
+        return _unauthorized()
+    body, code = _goto(ref, request.args.get("countdown"))
+    return jsonify(body), code
+
+
+@app.route("/panel/events", methods=["GET"])
+def panel_events():
+    if not verify_token(request):
+        return _unauthorized()
+    try:
+        since = int(request.args.get("since", "0"))
+    except ValueError:
+        since = 0
+    return jsonify(panel_store.events_since(since)), 200
+
+
+@app.route("/panel/key/<kid>", methods=["POST"])
+def panel_key(kid):
+    """Run one shortcut by id. Each kind goes to an existing, whitelisted
+    handler — a shortcut can never carry a shell command of its own."""
+    if not verify_token(request):
+        return _unauthorized()
+    key = panel_store.find_shortcut(panel_store.load_config(), kid)
+    if key is None:
+        return jsonify({"error": f"no shortcut {kid!r}"}), 404
+    do = key.get("do") or {}
+    kind, ref = do.get("kind"), do.get("ref", "")
+
+    if kind == "action":
+        body, code = do_action(ref)
+    elif kind == "pc_app":
+        body, code = do_pc_launch(ref)
+    elif kind in ("service_restart", "service_stop"):
+        body, code = do_service(kind.split("_", 1)[1], ref)
+    elif kind == "feed":
+        body, code = do_feed()
+    elif kind == "spotify":
+        body, code = do_spotify(ref)
+    elif kind == "goto":
+        body, code = _goto(ref, do.get("countdown", 0))
+    elif kind == "push":
+        entry = panel_store.normalize_push(None, str(do.get("value", "on")), do.get("ttl"))
+        panel_store.set_push(ref, entry)
+        body, code = {"status": "ok", "key": ref}, 200
+    elif kind == "url":
+        # Opened by the browser that pressed the key; nothing to do here.
+        body, code = {"status": "ok", "open": ref}, 200
+    else:
+        body, code = {"error": f"unknown kind {kind!r}"}, 400
+    return jsonify(body), code
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=2122, debug=False)
