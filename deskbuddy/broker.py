@@ -432,40 +432,6 @@ async def handle_audio(chunk: bytes) -> None:
         await process_frame(frame)
 
 
-# ── UDP audio in ────────────────────────────────────────────────────────────
-# The ESP32 sends mic PCM as UDP datagrams to BUDDY_PORT (same number as the
-# HTTP/WS port; UDP and TCP don't collide). A non-stop stream over the
-# WebSocket kept getting reset every ~8s; UDP has no connection to drop, and a
-# lost datagram is only 32ms of audio. The WebSocket now just carries state.
-# Datagrams go through one queue + one consumer so frames are processed
-# strictly in order, never by two overlapping handle_audio() calls.
-AUDIO_QUEUE_MAX = 200          # ~6s of 32ms packets; drop beyond that
-
-
-class AudioUDP(asyncio.DatagramProtocol):
-    def __init__(self, queue: asyncio.Queue):
-        self.queue = queue
-        self.peer = None
-
-    def datagram_received(self, data: bytes, addr) -> None:
-        if addr[0] != self.peer:
-            self.peer = addr[0]
-            print(f"[buddy] udp audio from {self.peer}")
-        try:
-            self.queue.put_nowait(data)
-        except asyncio.QueueFull:
-            pass  # broker fell behind; dropping beats unbounded memory
-
-
-async def audio_consumer(queue: asyncio.Queue) -> None:
-    while True:
-        chunk = await queue.get()
-        try:
-            await handle_audio(chunk)
-        except Exception as exc:  # noqa: BLE001 — never kill the consumer over one packet
-            print(f"[buddy] audio handler error: {exc}")
-
-
 # ── Routes ──────────────────────────────────────────────────────────────────
 async def ws_handler(request):
     # arduinoWebSockets requests the "arduino" subprotocol by default; the server
@@ -578,13 +544,6 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
     print(f"[buddy] serving on http://0.0.0.0:{PORT}")
-
-    audio_q: asyncio.Queue = asyncio.Queue(maxsize=AUDIO_QUEUE_MAX)
-    loop = asyncio.get_running_loop()
-    await loop.create_datagram_endpoint(lambda: AudioUDP(audio_q),
-                                        local_addr=("0.0.0.0", PORT))
-    consumer = asyncio.create_task(audio_consumer(audio_q))  # noqa: F841 — keep a ref so it isn't GC'd
-    print(f"[buddy] udp audio on 0.0.0.0:{PORT}")
 
     while True:
         await asyncio.sleep(3600)

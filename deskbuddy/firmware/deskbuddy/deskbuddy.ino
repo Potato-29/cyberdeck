@@ -1,11 +1,8 @@
 // Desk Buddy — ESP32 firmware (phase 1)
 //
 // Thin audio + display client. Streams 16kHz/16-bit mono mic PCM to the phone
-// broker as UDP packets, and animates "eyes" on an SSD1306 OLED from the state
-// the broker pushes back over a WebSocket (idle / listening / thinking /
-// speaking / error). Audio and state are split on purpose: a non-stop audio
-// stream over the WebSocket kept getting reset every ~8s, and UDP has no
-// connection to drop — a lost packet is just 32ms of missing audio.
+// broker over a WebSocket, and animates "eyes" on an SSD1306 OLED from the
+// state the broker pushes back (idle / listening / thinking / speaking / error).
 //
 // Phase 1 has NO audio output — replies play on the phone speaker. The GF1002
 // amp + speaker (DAC on GPIO25) come in phase 2, when the speaker wire arrives.
@@ -19,7 +16,6 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <ESP_I2S.h>
-#include <WiFiUdp.h>
 #include <WebSocketsClient.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -64,20 +60,23 @@ RoboEyes<Adafruit_SSD1306> roboEyes(display);   // template param = display driv
 // readBytes() blocks until the whole block is in, so keep it short (256 = 16ms)
 // or the eye animation and webSocket.loop() stall behind the mic.
 #define BLOCK_SAMPLES 256         // samples per I2S read (16ms)
-// Samples per UDP packet: 512 = 32ms = 1024 bytes, under the ~1460-byte
-// payload limit so a packet is never fragmented. The broker re-frames to 1280.
-#define UDP_SAMPLES   512
+// Samples per WebSocket message (128ms, 4 KiB). Reads stay small so the eyes
+// stay smooth, but sends are batched: one message per read was ~62 tiny TCP
+// segments a second (the library sets TCP_NODELAY), which overruns lwIP's
+// small send queue — the socket write then errors, the core closes the socket,
+// and the broker sees a reset every few seconds. ~8 big sends/s doesn't.
+// Must be a multiple of BLOCK_SAMPLES. The broker re-frames to 1280 anyway.
+#define SEND_SAMPLES  2048
 #define USE_RIGHT_SLOT false      // INMP441 L/R -> GND = left slot
 
 I2SClass i2s;
 int32_t rawBuf[BLOCK_SAMPLES];    // INMP441 delivers 24-bit data in 32-bit slots
-int16_t pcmOut[UDP_SAMPLES];      // one UDP packet's worth of PCM
+// Send buffer with WEBSOCKETS_MAX_HEADER_SIZE bytes reserved up front, so
+// sendBIN(..., headerToPayload=true) builds the frame in place and hands the
+// socket ONE write per message — no malloc + copy, no separate header write.
+uint8_t sendBuf[WEBSOCKETS_MAX_HEADER_SIZE + SEND_SAMPLES * sizeof(int16_t)];
+int16_t* const pcmOut = (int16_t*)(sendBuf + WEBSOCKETS_MAX_HEADER_SIZE);
 int pcmFill = 0;                  // samples currently batched in pcmOut
-
-// Audio goes to the broker's UDP port — same number as the WebSocket's TCP
-// port (BROKER_PORT); TCP and UDP ports don't collide.
-WiFiUDP udp;
-IPAddress brokerIp;
 
 // ── State ────────────────────────────────────────────────────────────────────
 WebSocketsClient webSocket;
@@ -99,17 +98,16 @@ void initMic() {
   }
 }
 
-// Read one block, convert 32-bit slots to 16-bit PCM, batch it, and send each
-// full batch as one UDP packet. Independent of the WebSocket: audio keeps
-// flowing even while the state link reconnects.
+// Read one block, convert 32-bit slots to 16-bit PCM, batch it, and stream a
+// full batch over the WebSocket.
 void pumpAudio() {
-  if (WiFi.status() != WL_CONNECTED) { pcmFill = 0; return; }
+  if (!wsConnected) { pcmFill = 0; return; }   // drop half a batch from a dead link
   size_t got = i2s.readBytes((char*)rawBuf, sizeof(rawBuf));
   int n = got / sizeof(int32_t);
   if (n == 0) return;
 
   static float dcPrevIn = 0.0f, dcPrevOut = 0.0f;   // DC blocker state, per-sample
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n && pcmFill < SEND_SAMPLES; i++) {
     float x   = (float)(rawBuf[i] >> MIC_GAIN_SHIFT);
     float y   = x - dcPrevIn + MIC_DC_R * dcPrevOut;
     dcPrevIn  = x;
@@ -118,13 +116,13 @@ void pumpAudio() {
     int32_t v = (int32_t)y;
     if (v > 32767) v = 32767; else if (v < -32768) v = -32768;
     pcmOut[pcmFill++] = (int16_t)v;
+  }
 
-    if (pcmFill == UDP_SAMPLES) {
-      udp.beginPacket(brokerIp, BROKER_PORT);
-      udp.write((const uint8_t*)pcmOut, sizeof(pcmOut));
-      udp.endPacket();
-      pcmFill = 0;
-    }
+  if (pcmFill >= SEND_SAMPLES) {
+    // headerToPayload=true: `sendBuf` points at the reserved header space, the
+    // length is the payload only. The library writes the header in front.
+    webSocket.sendBIN(sendBuf, SEND_SAMPLES * sizeof(int16_t), true);
+    pcmFill = 0;
   }
 }
 
@@ -243,7 +241,6 @@ void setup() {
 
   connectWifi();
   initMic();
-  brokerIp.fromString(BROKER_HOST);   // parse once, not per packet
 
   webSocket.begin(BROKER_HOST, BROKER_PORT, "/ws");
   webSocket.onEvent(wsEvent);
