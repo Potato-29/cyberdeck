@@ -31,13 +31,9 @@ Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
 #include <FluxGarage_RoboEyes.h>
 RoboEyes<Adafruit_SSD1306> roboEyes(display);   // template param = display driver
 
-// Wi-Fi the ESP32 joins (must be the same LAN as the phone broker)
-#define WIFI_SSID   "Phone_1_1678"
-#define WIFI_PASS   "12345678"
-
-// The phone's LAN IP running deskbuddy/broker.py (inside proot), and its port
-#define BROKER_HOST "10.238.133.125"
-#define BROKER_PORT 2125
+// WIFI_SSID / WIFI_PASS / BROKER_HOST / BROKER_PORT — gitignored, copy from
+// secrets.h.example. Never put real credentials in this file.
+#include "secrets.h"
 
 
 // INMP441 input gain, as a right-shift of the raw 32-bit slot down to 16-bit.
@@ -52,9 +48,9 @@ RoboEyes<Adafruit_SSD1306> roboEyes(display);   // template param = display driv
 
 
 // ── Pins ─────────────────────────────────────────────────────────────────────
-#define I2S_SCK   14          // INMP441 SCK (bit clock)
-#define I2S_WS    27          // INMP441 WS  (word select / LR clock)
-#define I2S_SD    32          // INMP441 SD  (serial data out)
+#define I2S_SCK   32          // INMP441 SCK (bit clock)
+#define I2S_WS    33          // INMP441 WS  (word select / LR clock)
+#define I2S_SD    34          // INMP441 SD  (serial data out) — 34 is input-only, fine for data in
 #define BOOT_BTN  0           // onboard BOOT button — optional manual trigger
 
 
@@ -63,12 +59,24 @@ RoboEyes<Adafruit_SSD1306> roboEyes(display);   // template param = display driv
 #define SAMPLE_RATE   16000
 // readBytes() blocks until the whole block is in, so keep it short (256 = 16ms)
 // or the eye animation and webSocket.loop() stall behind the mic.
-#define BLOCK_SAMPLES 256         // samples per read/send; broker re-frames to 1280
+#define BLOCK_SAMPLES 256         // samples per I2S read (16ms)
+// Samples per WebSocket message (128ms, 4 KiB). Reads stay small so the eyes
+// stay smooth, but sends are batched: one message per read was ~62 tiny TCP
+// segments a second (the library sets TCP_NODELAY), which overruns lwIP's
+// small send queue — the socket write then errors, the core closes the socket,
+// and the broker sees a reset every few seconds. ~8 big sends/s doesn't.
+// Must be a multiple of BLOCK_SAMPLES. The broker re-frames to 1280 anyway.
+#define SEND_SAMPLES  2048
 #define USE_RIGHT_SLOT false      // INMP441 L/R -> GND = left slot
 
 I2SClass i2s;
 int32_t rawBuf[BLOCK_SAMPLES];    // INMP441 delivers 24-bit data in 32-bit slots
-int16_t pcmBuf[BLOCK_SAMPLES];
+// Send buffer with WEBSOCKETS_MAX_HEADER_SIZE bytes reserved up front, so
+// sendBIN(..., headerToPayload=true) builds the frame in place and hands the
+// socket ONE write per message — no malloc + copy, no separate header write.
+uint8_t sendBuf[WEBSOCKETS_MAX_HEADER_SIZE + SEND_SAMPLES * sizeof(int16_t)];
+int16_t* const pcmOut = (int16_t*)(sendBuf + WEBSOCKETS_MAX_HEADER_SIZE);
+int pcmFill = 0;                  // samples currently batched in pcmOut
 
 // ── State ────────────────────────────────────────────────────────────────────
 WebSocketsClient webSocket;
@@ -90,15 +98,16 @@ void initMic() {
   }
 }
 
-// Read one block, convert 32-bit slots to 16-bit PCM, stream over the WebSocket.
+// Read one block, convert 32-bit slots to 16-bit PCM, batch it, and stream a
+// full batch over the WebSocket.
 void pumpAudio() {
-  if (!wsConnected) return;
+  if (!wsConnected) { pcmFill = 0; return; }   // drop half a batch from a dead link
   size_t got = i2s.readBytes((char*)rawBuf, sizeof(rawBuf));
   int n = got / sizeof(int32_t);
   if (n == 0) return;
 
   static float dcPrevIn = 0.0f, dcPrevOut = 0.0f;   // DC blocker state, per-sample
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n && pcmFill < SEND_SAMPLES; i++) {
     float x   = (float)(rawBuf[i] >> MIC_GAIN_SHIFT);
     float y   = x - dcPrevIn + MIC_DC_R * dcPrevOut;
     dcPrevIn  = x;
@@ -106,9 +115,15 @@ void pumpAudio() {
 
     int32_t v = (int32_t)y;
     if (v > 32767) v = 32767; else if (v < -32768) v = -32768;
-    pcmBuf[i] = (int16_t)v;
+    pcmOut[pcmFill++] = (int16_t)v;
   }
-  webSocket.sendBIN((uint8_t*)pcmBuf, n * sizeof(int16_t));
+
+  if (pcmFill >= SEND_SAMPLES) {
+    // headerToPayload=true: `sendBuf` points at the reserved header space, the
+    // length is the payload only. The library writes the header in front.
+    webSocket.sendBIN(sendBuf, SEND_SAMPLES * sizeof(int16_t), true);
+    pcmFill = 0;
+  }
 }
 
 // ── Eyes ─────────────────────────────────────────────────────────────────────
@@ -195,6 +210,7 @@ void wsEvent(WStype_t type, uint8_t* payload, size_t len) {
 // ── WiFi ─────────────────────────────────────────────────────────────────────
 void connectWifi() {
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);   // modem sleep adds latency spikes to a constant stream
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   Serial.print("[wifi] connecting");
   int tries = 0;

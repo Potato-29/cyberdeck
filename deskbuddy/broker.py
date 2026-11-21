@@ -439,6 +439,9 @@ async def ws_handler(request):
     ws = web.WebSocketResponse(protocols=("arduino",), max_msg_size=0, heartbeat=30)
     await ws.prepare(request)
     clients.add(ws)
+    # A reconnect starts a fresh stream: drop any half frame left by the old
+    # socket so it isn't glued onto the new audio.
+    _accum.clear()
     peer = request.remote
     opened = time.monotonic()
     nbytes = 0

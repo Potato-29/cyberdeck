@@ -85,9 +85,9 @@ change.
 
 | Signal             | ESP32 pin       | Notes                                                   |
 | ------------------ | --------------- | ------------------------------------------------------- |
-| INMP441 SCK (BCLK) | GPIO14          | I2S bit clock                                           |
-| INMP441 WS (LRCL)  | GPIO27          | I2S word select                                         |
-| INMP441 SD (DOUT)  | GPIO32          | I2S data in                                             |
+| INMP441 SCK (BCLK) | GPIO32          | I2S bit clock                                           |
+| INMP441 WS (LRCL)  | GPIO33          | I2S word select                                         |
+| INMP441 SD (DOUT)  | GPIO34          | I2S data in (input-only pin, fine for data in)          |
 | INMP441 L/R        | GND             | selects the left channel                                |
 | INMP441 VDD / GND  | 3V3 / GND       |                                                         |
 | SSD1306 SDA / SCL  | GPIO21 / GPIO22 | default I2C, address `0x3C`                             |
