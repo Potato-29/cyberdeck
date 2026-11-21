@@ -439,11 +439,15 @@ async def ws_handler(request):
     ws = web.WebSocketResponse(protocols=("arduino",), max_msg_size=0, heartbeat=30)
     await ws.prepare(request)
     clients.add(ws)
-    print(f"[buddy] client connected ({len(clients)} total)")
+    peer = request.remote
+    opened = time.monotonic()
+    nbytes = 0
+    print(f"[buddy] client connected from {peer} ({len(clients)} total)")
     await ws.send_str(json.dumps({"state": STATE}))  # sync eyes on connect
     try:
         async for msg in ws:
             if msg.type == web.WSMsgType.BINARY:
+                nbytes += len(msg.data)
                 try:
                     await handle_audio(msg.data)
                 except Exception as exc:  # noqa: BLE001 — never drop the socket over one frame
@@ -453,7 +457,12 @@ async def ws_handler(request):
             # text frames from the device are ignored for now
     finally:
         clients.discard(ws)
-        print(f"[buddy] client disconnected ({len(clients)} total)")
+        # Why it ended: close_code 1006 + an exception means the broker gave up
+        # (e.g. heartbeat timeout); 1000/1001 or a reset means the device hung up.
+        print(f"[buddy] client disconnected from {peer} after "
+              f"{time.monotonic() - opened:.1f}s, {nbytes // 1024} KiB audio, "
+              f"close_code={ws.close_code} exc={ws.exception()!r} "
+              f"({len(clients)} total)")
     return ws
 
 
