@@ -19,12 +19,17 @@ speaker wired to the ESP32 yet, so the firmware has no audio-out code.
 
 ```
 ┌──────── ESP32 ────────┐   Wi-Fi/LAN   ┌──────── phone: proot Ubuntu ────────┐
-│ INMP441 ─I2S─▶ 16kHz  │──ws binary──▶ │ broker.py :2125                     │
+│ INMP441 ─I2S─▶ 16kHz  │──udp pcm────▶ │ broker.py :2125 (UDP audio, TCP ws) │
 │ PCM ──────────────────│               │  openWakeWord "hey_jarvis" + VAD    │
 │ SSD1306 eyes ◀────────│◀──ws json ────│  Groq STT ▶ Groq LLM ▶ Groq TTS     │
 │  idle/listen/think/…  │  {"state":…}  │   └─▶ paplay ─▶ Termux PulseAudio ──▶ phone speaker
 └───────────────────────┘               └─────────────────────────────────────┘
 ```
+
+Audio and state travel separately: mic PCM goes as **UDP** datagrams (32 ms
+each) to the broker's port, and the WebSocket only carries eye states. A
+non-stop audio stream over the WebSocket was reset every ~8 s; UDP has no
+connection to drop, and a lost packet costs 32 ms of audio.
 
 Turn: mic streams continuously → oWW watches for "hey jarvis" → on wake the eyes
 go `listening` and the broker captures until you stop talking → `thinking` while
@@ -185,7 +190,8 @@ All keys are optional (sensible defaults); reuse the existing `GROQ_API_KEY`.
 | Method | Path          | Purpose                                                        |
 | ------ | ------------- | -------------------------------------------------------------- |
 | GET    | `/`           | Dashboard HUD                                                  |
-| GET    | `/ws`         | WebSocket — ESP32 sends binary mic PCM, receives `{"state":…}` |
+| GET    | `/ws`         | WebSocket — ESP32 receives `{"state":…}` (binary PCM still accepted) |
+| UDP    | `:2125`       | Mic audio: raw 16kHz/16-bit mono PCM, 1024-byte datagrams       |
 | GET    | `/state`      | JSON status (state, wake armed?, last transcript/reply)        |
 | GET    | `/say?text=…` | Test the loop without a mic: LLM → TTS → phone speaker         |
 

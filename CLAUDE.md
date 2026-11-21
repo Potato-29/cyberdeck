@@ -25,7 +25,7 @@ The most collision-prone thing in the repo. Check here before picking one.
 | 2122 | `webhook_new.py` — the hub | phone |
 | 2123 | `standup.py` standalone (testing only) | phone |
 | 2124 | `ideas/server.py` | phone |
-| 2125 | `deskbuddy/broker.py` — voice assistant broker (proot) | phone |
+| 2125 | `deskbuddy/broker.py` — voice assistant broker (proot); TCP for HTTP/WS state, UDP for mic audio | phone |
 | 2126 | `crumbs` — Crumb Notes (proot, `node build`) | phone |
 | 2127 | `work-log-tool/server.js` — work log capture | phone |
 | 8000 | `forza/forza_listener.py` (UDP 5300 in) | phone |
