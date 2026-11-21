@@ -171,7 +171,7 @@ All keys are optional (sensible defaults); reuse the existing `GROQ_API_KEY`.
 | `BUDDY_PORT`           | `2125`                    | HTTP + WebSocket port                      |
 | `GROQ_API_KEY`         | _(shared)_                | Same key as standup                        |
 | `BUDDY_STT_MODEL`      | `whisper-large-v3-turbo`  | Groq Whisper                               |
-| `BUDDY_LLM_MODEL`      | `llama-3.3-70b-versatile` | Groq chat                                  |
+| `BUDDY_LLM_MODEL`      | `qwen/qwen3.8-27b`        | Groq chat                                  |
 | `BUDDY_TTS_MODEL`      | `playai-tts`              | Groq TTS (preview — swap if retired)       |
 | `BUDDY_TTS_VOICE`      | `Fritz-PlayAI`            | TTS voice                                  |
 | `BUDDY_WAKE_MODEL`     | `hey_jarvis`              | openWakeWord pretrained model name         |
